@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.Build.Traversal">
+  <Sdk Name="Microsoft.Build.CentralPackageVersions" Version="2.0.1" />
+  <ItemGroup>
+    <!-- Build all projects recursively under the "src" folder -->
+    <PackageReference Include="Microsoft.VisualStudio.SlnGen"/>
+    <ProjectReference Include="**\*.*proj" />
+  </ItemGroup>
+</Project>

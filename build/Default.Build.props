@@ -1,0 +1,18 @@
+<Project>
+ <PropertyGroup>
+   <Deterministic>true</Deterministic>
+ </PropertyGroup>
+
+ <PropertyGroup>
+    <SrcRoot>$(RepoRoot)\src</SrcRoot>
+    <BuildRoot>$(RepoRoot)\build</BuildRoot>
+
+    <CentralPackagesFile>$(BuildRoot)\packages\Packages.props</CentralPackagesFile>
+ </PropertyGroup>
+
+ <PropertyGroup>
+    <NetCoreVersion>net7.0</NetCoreVersion>
+ </PropertyGroup>
+
+ <Import Project="$(MSBuildThisFileDirectory)\slngen\slngen.props" />
+</Project>

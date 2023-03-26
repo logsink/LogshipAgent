@@ -1,0 +1,5 @@
+<Project>
+	<ItemGroup Condition="'$(MSBuildProjectExtension)' == '.proj'">
+		<PackageReference Include="Microsoft.VisualStudio.SlnGen"/>
+	</ItemGroup>
+</Project>
