@@ -17,6 +17,7 @@ namespace Logship.Agent.Service.Collectors
         { 
             this.configuration = configuration;
             this.sink = sink;
+            this.startupTime = DateTimeOffset.UtcNow;
         }
 
         protected override async Task ExecuteAsync(CancellationToken token)
@@ -24,14 +25,16 @@ namespace Logship.Agent.Service.Collectors
             while (false == token.IsCancellationRequested)
             {
                 this.sink.Push(new Records.DataRecord("Logship.Agent.Uptime", DateTimeOffset.UtcNow, new Dictionary<string, object>
-            {
-                {  "startTime", this.startupTime.ToString("O") },
-                {  "value", (DateTimeOffset.UtcNow - this.startupTime).ToString("c") }
-            }
-            ));
+                {
+                    { "machine", Environment.MachineName },
+                    {  "startTime", this.startupTime.ToString("O") },
+                    {  "value", (DateTimeOffset.UtcNow - this.startupTime).ToString("c") }
+                }));
+
+
                 await Task.Delay(this.configuration.Interval, token).ConfigureAwait(false);
             }
-            
+
         }
     }
 }

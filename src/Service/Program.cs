@@ -53,6 +53,14 @@ var configuration = JsonSerializer.Deserialize<RootConfiguration>(File.ReadAllTe
     PropertyNameCaseInsensitive = true,
 }).RootConfiguration);
 
+if (configuration == null)
+{
+    // If the configuration is null, then deserialization failed.
+    // Just log an error and exit.
+    loggerFactory.CreateLogger("root").LogError("Failed to deserialize configuration.");
+    return;
+}
+
 var host = new RootServiceHost(configuration, loggerFactory.CreateLogger("root"));
 
 await host.StartAsync(tokenSource.Token);

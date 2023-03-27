@@ -11,6 +11,9 @@ namespace Logship.Agent.Service.Services
         private readonly PushService pushService;
         private UptimeService? uptimeService;
 
+        // Windows
+        private WindowsPerformanceCountersService? windowsPerformanceCountersService;
+
         public RootServiceHost(RootConfiguration rootConfiguration, ILogger logger) : base("RootService", logger)
         {
             this.rootConfiguration = rootConfiguration;
@@ -29,6 +32,12 @@ namespace Logship.Agent.Service.Services
             {
                 this.uptimeService = await this.StartStopBasedOnConfig(this.rootConfiguration.UptimeService, this.uptimeService, () => new UptimeService(this.rootConfiguration.UptimeService, this.infoSink, this.Logger), token);
 
+                if (this.rootConfiguration.Windows.Enabled)
+                {
+                    // windows
+                    this.windowsPerformanceCountersService = await this.StartStopBasedOnConfig(this.rootConfiguration.Windows.PerformanceCounter, this.windowsPerformanceCountersService, () => new WindowsPerformanceCountersService(this.rootConfiguration.Windows.PerformanceCounter, this.infoSink, this.Logger), token);
+                }
+
                 await Task.Delay(5000, token);
             }
         }
@@ -36,12 +45,13 @@ namespace Logship.Agent.Service.Services
         protected override async Task OnStop(CancellationToken token)
         {
             await this.StopIfRunning(this.uptimeService, token);
+            await this.StopIfRunning(this.windowsPerformanceCountersService, token);
 
             await this.pushService.StopAsync(token);
             await base.OnStop(token);
         }
 
-        private async Task<T> StartStopBasedOnConfig<T>(BaseServiceConfiguration config, T existing, Func<T> startServiceTask, CancellationToken token)
+        private async Task<T> StartStopBasedOnConfig<T>(BaseServiceConfiguration config, T? existing, Func<T> startServiceTask, CancellationToken token)
             where T : BaseAsyncService
         {
             if (null == existing)
@@ -58,14 +68,14 @@ namespace Logship.Agent.Service.Services
                 if (false == config.Enabled)
                 {
                     await existing.StopAsync(token);
-                    return null;
+                    return null!;
                 }
             }
 
-            return existing;
+            return existing!;
         }
 
-        private async Task StopIfRunning(BaseAsyncService service, CancellationToken token)
+        private async Task StopIfRunning(BaseAsyncService? service, CancellationToken token)
         {
             if (null != service)
             {
