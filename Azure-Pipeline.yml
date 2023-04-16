@@ -20,7 +20,7 @@ steps:
 - task: DotNetCoreCLI@2
   inputs:
     command: 'pack'
-    packagesToPack: 'src/Service/Logship.Gateway.Service.csproj'
+    packagesToPack: 'src/ConsoleHost/Logship.Agent.ConsoleHost.csproj'
     versioningScheme: 'byPrereleaseNumber'
     majorVersion: '1'
     minorVersion: '0'
