@@ -1,5 +1,6 @@
 ﻿using Logship.Agent.Core.Records;
 using Microsoft.Diagnostics.Tracing;
+using System.Text;
 
 namespace Logship.Agent.Core.Inputs.Windows.Etw
 {
@@ -15,7 +16,7 @@ namespace Logship.Agent.Core.Inputs.Windows.Etw
             {
                 name = traceEvent.ProviderGuid.ToString();
             }
-            var eventData = new DataRecord($"windows.etw.{name}.{traceEvent.EventName}", traceEvent.TimeStamp.ToUniversalTime(), new Dictionary<string, object>()
+            var eventData = new DataRecord(CleanEventName($"windows.etw.{name}.{traceEvent.EventName}"), traceEvent.TimeStamp.ToUniversalTime(), new Dictionary<string, object>()
             {
                 { "machine", Environment.MachineName },
                 { nameof(traceEvent.ProviderName), traceEvent.ProviderName },
@@ -62,6 +63,33 @@ namespace Logship.Agent.Core.Inputs.Windows.Etw
             }
 
             return eventData;
+        }
+
+        private static string CleanEventName(string eventName)
+        {
+            var wasChanges = false;
+
+            var builder = new StringBuilder(eventName);
+            for (var i = 0; i < builder.Length; i++)
+            {
+                if (char.IsLetterOrDigit(builder[i]))
+                {
+                    continue;
+                }
+                if (builder[i] == '.' || builder[i] == '-' || builder[i] == '_')
+                {
+                    continue;
+                }
+                builder[i] = '_';
+                wasChanges = true;
+            }
+
+            if (!wasChanges)
+            {
+                return eventName;
+            }
+
+            return builder.ToString();
         }
     }
 }

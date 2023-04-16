@@ -30,7 +30,7 @@ namespace Logship.Agent.Core.Events
             this.logger.LogInformation("Flushing {flushSize} data records.", records.Count);
             try
             {
-                foreach (var batch in records.Chunk(100_000))
+                foreach (var batch in records.Chunk(20_000))
                 {
                     using var flush = new EventSinkFlushContext(batch, onFailure: this.buffer.Add, logger);
                     flush.Success = await this.eventOutput.SendAsync(batch, token);

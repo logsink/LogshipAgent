@@ -115,7 +115,8 @@ namespace Logship.Agent.Core
                         }
                         this.services.Add(type, service);
                     }
-                    else if (service is BaseConfiguredService c)
+
+                    if (service is BaseConfiguredService c)
                     {
                         c.UpdateConfiguration(inputConfig);
                     }
@@ -128,6 +129,7 @@ namespace Logship.Agent.Core
                 if (false == this.services.TryGetValue("Output", out var existingOutput))
                 {
                     existingOutput = new PushService(this.eventSink, loggerFactory.CreateLogger(nameof(PushService)));
+                    this.services.Add("Output", existingOutput);
                 }
                 ((PushService)existingOutput).UpdateConfiguration(output);
             }

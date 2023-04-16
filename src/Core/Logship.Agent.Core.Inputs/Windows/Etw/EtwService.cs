@@ -31,7 +31,7 @@ namespace Logship.Agent.Core.Inputs.Windows.Etw
 
         public override void UpdateConfiguration(IConfigurationSection configuration)
         {
-            this.sessionNamePrefix = configuration.GetValueOrDefault(nameof(sessionNamePrefix), str => str ?? SessionNamePrefix, this.Logger)!;
+            this.sessionNamePrefix = configuration.GetValueOrDefault(nameof(sessionNamePrefix), str => str ?? SessionNamePrefix, this.Logger) ?? SessionNamePrefix;
             this.cleanupOldSessions = configuration.GetValueOrDefault(nameof(cleanupOldSessions), str => bool.TryParse(str, out var result) ? result : true, this.Logger);
             this.reuseExistingSession = configuration.GetValueOrDefault(nameof(reuseExistingSession), str => bool.TryParse(str, out var result) ? result : true, this.Logger);
 
