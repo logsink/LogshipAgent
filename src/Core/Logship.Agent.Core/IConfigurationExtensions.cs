@@ -38,7 +38,7 @@ namespace Logship.Agent.Core
             return val;
         }
 
-        public static T GetValueOrDefault<T>(this IConfiguration configuration, string propertyName, Func<string, T?> factory, ILogger logger)
+        public static T? GetValueOrDefault<T>(this IConfiguration configuration, string propertyName, Func<string, T?> factory, ILogger logger)
         {
             string configPath = string.Empty;
             if (configuration is IConfigurationSection section)

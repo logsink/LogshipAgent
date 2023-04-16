@@ -6,7 +6,7 @@ namespace Logship.Agent.Core.Inputs.Windows.Etw
 {
     internal class StandardTraceEventSession : ITraceEventSession
     {
-        private TraceEventSession inner;
+        private TraceEventSession? inner;
         private volatile bool isProcessing;
 
         public StandardTraceEventSession(string sessionNamePrefix, bool cleanupOldSessions, bool reuseExisting)
@@ -102,9 +102,11 @@ namespace Logship.Agent.Core.Inputs.Windows.Etw
             }
         }
 
-        private string CleanupMatchingSessions(string sessionNamePrefix, bool keepOne)
+        private string? CleanupMatchingSessions(string sessionNamePrefix, bool keepOne)
         {
-            string result = null;
+            // TODO: This function makes absolutely no sense. It should be rewritten.
+
+            string? result = null;
 
             foreach (var sesName in TraceEventSession.GetActiveSessionNames())
             {

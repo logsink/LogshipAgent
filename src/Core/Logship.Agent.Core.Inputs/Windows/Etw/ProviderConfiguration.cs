@@ -28,7 +28,7 @@ namespace Logship.Agent.Core.Inputs.Windows.Etw
         public static bool TryFrom(IConfigurationSection configuration, ILogger logger, out ProviderConfiguration result)
         {
             result = new ProviderConfiguration(
-                providerName: configuration.GetValueOrDefault(nameof(ProviderName), str => str ?? string.Empty, logger),
+                providerName: configuration.GetValueOrDefault(nameof(ProviderName), str => str ?? string.Empty, logger)!,
                 level: configuration.GetValueOrDefault(nameof(Level), str =>
                 {
                     if (Enum.TryParse(str, out TraceEventLevel level))

@@ -17,7 +17,7 @@ namespace Logship.Agent.Core.Inputs.Windows.Etw
         private const int MaxBuilderSize = 360;
 
         [ThreadStatic]
-        private static StringBuilder cachedInstance;
+        private static StringBuilder? cachedInstance;
 
         /// <summary>
         /// Gets a string builder to use of a particular size.
@@ -33,7 +33,7 @@ namespace Logship.Agent.Core.Inputs.Windows.Etw
         {
             if (capacity <= MaxBuilderSize)
             {
-                StringBuilder sb = StringBuilderCache.cachedInstance;
+                StringBuilder? sb = StringBuilderCache.cachedInstance;
                 if (sb != null)
                 {
                     // Avoid stringbuilder block fragmentation by getting a new StringBuilder

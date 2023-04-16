@@ -46,7 +46,7 @@ internal partial class PerformanceCountersService : BaseConfiguredService
 
         while (false == token.IsCancellationRequested)
         {
-            // Check if we need to refresh out counters.
+            // Check if we need to refresh our counters.
             if (counterRefresh.Elapsed > this.counterRefreshInterval)
             {
                 counters = this.GetUniqueCountersForQueries(this.counters);

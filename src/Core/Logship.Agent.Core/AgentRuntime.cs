@@ -1,12 +1,9 @@
 ﻿using Logship.Agent.Core.Events;
-using Logship.Agent.Core.Internals;
 using Logship.Agent.Core.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using System.Collections.Concurrent;
-using System.Net;
-using System.Threading;
 
 namespace Logship.Agent.Core
 {
@@ -19,10 +16,10 @@ namespace Logship.Agent.Core
         private readonly ILoggerFactory loggerFactory;
         private readonly ILogger rootLogger;
         private readonly EventSink eventSink;
-        private readonly ConcurrentDictionary<string, BaseAsyncService?> services;
+        private readonly IDictionary<string, BaseAsyncService> services;
         private BaseAsyncService eventOutput;
 
-        internal AgentRuntime(IConfigurationRoot configuration, ILoggerFactory loggerFactory, ConcurrentDictionary<string, Func<IEventSink, ILogger, BaseAsyncService?>> configuredInputs)
+        internal AgentRuntime(IConfigurationRoot configuration, ILoggerFactory loggerFactory, ConcurrentDictionary<string, Func<IEventSink, ILogger, BaseAsyncService>> configuredInputs)
         {
             this.configuredInputs = configuredInputs;
             this.configuration = configuration;
@@ -31,7 +28,7 @@ namespace Logship.Agent.Core
 
             this.loggerFactory = loggerFactory;
             this.rootLogger = loggerFactory.CreateLogger(nameof(AgentRuntime));
-            this.services = new ConcurrentDictionary<string, BaseAsyncService?>();
+            this.services = new Dictionary<string, BaseAsyncService>();
 
             string endpoint = configuration.GetSection("Output").GetRequiredStringValue(nameof(endpoint), this.rootLogger);
             IEventOutput output = endpoint == "console"
@@ -53,13 +50,16 @@ namespace Logship.Agent.Core
                 if (disposing)
                 {
                     this.cbDisposable.Dispose();
-                    foreach(var service in services)
+                    lock (this.services)
                     {
-                        if (service.Value is IDisposable d)
+                        foreach (var service in services)
                         {
-                            rootLogger.LogInformation("Disposing service {serviceName}.", service.Key);
-                            d.Dispose();
-                            rootLogger.LogInformation("Disposing service {serviceName}.", service.Key);
+                            if (service.Value is IDisposable d)
+                            {
+                                rootLogger.LogInformation("Disposing service {serviceName}.", service.Key);
+                                d.Dispose();
+                                rootLogger.LogInformation("Disposing service {serviceName}.", service.Key);
+                            }
                         }
                     }
                 }
@@ -77,16 +77,22 @@ namespace Logship.Agent.Core
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            this.LoadConfigureServices();
-            foreach (var service in services)
+            this.LoadConfiguredServices();
+            IEnumerable<KeyValuePair<string, BaseAsyncService>> snapshot;
+            lock (this.services)
+            {
+                snapshot = this.services.ToList();
+            }
+
+            foreach (var service in snapshot)
             {
                 rootLogger.LogInformation("Starting service {serviceName}.", service.Key);
-                await service.Value!.StartAsync(cancellationToken);
+                await service.Value.StartAsync(cancellationToken);
                 rootLogger.LogInformation("Started service {serviceName}.", service.Key);
             }
         }
 
-        private void LoadConfigureServices()
+        private void LoadConfiguredServices()
         {
             var inputs = this.configuration.GetSection("Inputs");
             foreach (var inputConfig in inputs.GetChildren())
@@ -97,23 +103,34 @@ namespace Logship.Agent.Core
                     continue;
                 }
 
-                var service = this.services.GetOrAdd(type,
-                    t => CreateServiceFromConfig(t, inputConfig));
-                if (service == null)
+                lock (this.services)
                 {
-                    this.rootLogger.LogWarning("Invalid configuration for input type {input}.", type);
-                    _ = this.services!.Remove(type, out _);
-                }
-                else if (service is BaseConfiguredService c)
-                {
-                    c.UpdateConfiguration(inputConfig);
+                    if (false == this.services.TryGetValue(type, out BaseAsyncService? service))
+                    {
+                        service = CreateServiceFromConfig(type, inputConfig);
+                        if (service == null)
+                        {
+                            this.rootLogger.LogWarning("Invalid configuration for input type {input}.", type);
+                            continue;
+                        }
+                        this.services.Add(type, service);
+                    }
+                    else if (service is BaseConfiguredService c)
+                    {
+                        c.UpdateConfiguration(inputConfig);
+                    }
                 }
             }
 
             var output = this.configuration.GetSection("Output");
-            var outputService = (PushService) this.services.GetOrAdd("Output",
-                t => new PushService(this.eventSink, loggerFactory.CreateLogger(nameof(PushService))))!;
-            outputService.UpdateConfiguration(output);
+            lock (this.services)
+            {
+                if (false == this.services.TryGetValue("Output", out var existingOutput))
+                {
+                    existingOutput = new PushService(this.eventSink, loggerFactory.CreateLogger(nameof(PushService)));
+                }
+                ((PushService)existingOutput).UpdateConfiguration(output);
+            }
         }
 
         private BaseAsyncService? CreateServiceFromConfig(string type, IConfigurationSection config)
@@ -130,12 +147,18 @@ namespace Logship.Agent.Core
         {
             this.rootLogger.LogInformation("Configuration changed. Updating services.");
             this.configuration.Reload();
-            this.LoadConfigureServices();
+            this.LoadConfiguredServices();
         }
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
-            foreach (var service in services)
+            IEnumerable<KeyValuePair<string, BaseAsyncService>> snapshot;
+            lock (this.services)
+            {
+                snapshot = this.services.ToList();
+            }
+
+            foreach (var service in snapshot)
             {
                 rootLogger.LogInformation("Stopping service {serviceName}.", service.Key);
                 await service.Value.StopAsync(cancellationToken);

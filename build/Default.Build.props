@@ -8,6 +8,7 @@
     <BuildRoot>$(RepoRoot)\build</BuildRoot>
 
     <CentralPackagesFile>$(BuildRoot)\packages\Packages.props</CentralPackagesFile>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
  </PropertyGroup>
 
  <PropertyGroup>
