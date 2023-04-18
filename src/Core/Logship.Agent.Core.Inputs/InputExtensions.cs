@@ -1,4 +1,5 @@
-﻿using Logship.Agent.Core.Inputs.Windows.Etw;
+﻿using Logship.Agent.Core.Inputs.Linux.JournalCtl;
+using Logship.Agent.Core.Inputs.Windows.Etw;
 
 namespace Logship.Agent.Core.Inputs
 {
@@ -8,6 +9,7 @@ namespace Logship.Agent.Core.Inputs
         {
             factory.RegisterInputService("windows.performanceCounters", (b, l) => new PerformanceCountersService(b, l));
             factory.RegisterInputService("windows.etw", (b, l) => new EtwService(b, l));
+            factory.RegisterInputService("journalctl", (b, l) => new JournalCtlService(b, l));
             return factory;
         }
     }

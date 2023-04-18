@@ -29,6 +29,11 @@ namespace Logship.Agent.Core.Events
 
         public Task<IReadOnlyCollection<DataRecord>> NextAsync(CancellationToken token)
         {
+            if (token.IsCancellationRequested)
+            {
+                return Task.FromResult<IReadOnlyCollection<DataRecord>>(Array.Empty<DataRecord>());
+            }
+
             var temp = this.bag;
             this.bag = new ConcurrentBag<DataRecord>();
             var items = temp.ToArray();

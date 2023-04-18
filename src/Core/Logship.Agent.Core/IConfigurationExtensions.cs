@@ -12,7 +12,7 @@ namespace Logship.Agent.Core
 {
     public static class IConfigurationExtensions
     {
-        public static T GetValue<T>(this IConfiguration configuration, string propertyName, Func<string, T?> factory, ILogger logger)
+        public static T GetRequiredValue<T>(this IConfiguration configuration, string propertyName, Func<string, T> factory, ILogger logger)
         {
             string configPath = string.Empty;
             if (configuration is IConfigurationSection section)
@@ -23,22 +23,24 @@ namespace Logship.Agent.Core
             string? value = configuration[propertyName];
             if (value == null)
             {
-                logger.LogError("Null configuration value at {path}:{configProperty}", configPath, propertyName);
-                throw new ConfigurationException($"Null configuration at path {configPath}. Expecting type {typeof(T).FullName}");
+                logger.LogError("Null configuration for required value at {path}:{property}", configPath, propertyName);
+                throw new ConfigurationRequiredException($"Null configuration at path {configPath}:{propertyName}.");
             }
 
-            T? val = factory(value);
-            if (val == null)
+            try
             {
-                logger.LogError("Failed to convert configuration value at {path}:{configProperty}", configPath, propertyName);
-                throw new ConfigurationException($"Failed to convert configuration at path {configPath}. Expecting type {typeof(T).FullName}");
+                T val = factory(value);
+                logger.LogInformation("Loaded configuration value at {path}:{property}. Value = {value}. Raw = {input}.", configPath, propertyName, val, value);
+                return val;
             }
-
-            logger.LogInformation("Loaded configuration value {path}:{configProperty} = {value}", configPath, propertyName, val);
-            return val;
+            catch (Exception ex)
+            {
+                logger.LogError("Failed to load configuration value at {path}:{property}. {exception}", configPath, propertyName, ex);
+                throw new ConfigurationException("Failed to load required configuration value.", ex);
+            }
         }
 
-        public static T? GetValueOrDefault<T>(this IConfiguration configuration, string propertyName, Func<string, T?> factory, ILogger logger)
+        public static T GetValue<T>(this IConfiguration configuration, string propertyName, Func<string?, T> factory, ILogger logger)
         {
             string configPath = string.Empty;
             if (configuration is IConfigurationSection section)
@@ -47,21 +49,17 @@ namespace Logship.Agent.Core
             }
 
             string? value = configuration[propertyName];
-            if (value == null)
+            try
             {
-                logger.LogInformation("Failed to load configuration value {path}:{configProperty}. Using default.", configPath, propertyName);
-                return default;
+                T val = factory(value);
+                logger.LogInformation("Loaded configuration value at {path}:{property}. Value = {value}. Raw = {input}.", configPath, propertyName, val, value);
+                return val;
             }
-
-            T? temp = factory(value);
-            if (temp == null)
+            catch (Exception ex)
             {
-                logger.LogInformation("Failed to convert configuration value {path}:{configProperty} = {value}. Using default.", configPath, propertyName, value);
-                return default;
+                logger.LogError("Failed to load configuration value at {path}:{property}. {exception}", configPath, propertyName, ex);
+                throw new ConfigurationException("Failed to load configuration value.", ex);
             }
-
-            logger.LogInformation("Loaded configuration value {path}:{configProperty} = {value}", configPath, propertyName, temp);
-            return temp;
         }
 
         public static IReadOnlyList<T> GetValues<T>(this IConfiguration configuration, string propertyName, Func<string?, T?> factory, ILogger logger)
@@ -95,28 +93,64 @@ namespace Logship.Agent.Core
             return result;
         }
 
-        public static string GetRequiredStringValue(this IConfiguration config, string propertyName, ILogger logger)
+        public static string GetRequiredString(this IConfiguration config, string propertyName, ILogger logger)
         {
-            return config.GetValue(propertyName, str => str, logger);
+            return config.GetRequiredValue(propertyName, str => str, logger);
         }
 
-        public static TimeSpan GetRequiredTimeSpanValue(this IConfiguration config, string propertyName, ILogger logger)
+        public static string GetString(this IConfiguration config, string propertyName, string defaultValue, ILogger logger)
         {
-            return config.GetValue(propertyName, str =>
+            return config.GetValue(propertyName, str => str ?? defaultValue, logger);
+        }
+
+        public static TEnum GetRequiredEnum<TEnum>(this IConfiguration configuration, string propertyName, ILogger logger)
+            where TEnum : struct, System.Enum
+        {
+            return configuration.GetRequiredValue(propertyName, str =>
             {
-                return TimeSpan.TryParse(str, out var i)
-                    ? i :
-                    throw new ConfigurationException($"Configuration was not a valid TimeSpan.");
+                if (Enum.TryParse<TEnum>(str, out var result))
+                {
+                    return result;
+                }
+
+                throw new ConfigurationFormatException($"Invalid enum format for {typeof(TEnum).FullName}");
             }, logger);
         }
 
-        public static TimeSpan GetTimeSpanValue(this IConfiguration config, string propertyName, TimeSpan defaultValue, ILogger logger)
+        public static TEnum GetEnum<TEnum>(this IConfiguration configuration, string propertyName, TEnum defaultValue, ILogger logger)
+            where TEnum : struct, System.Enum
         {
-            return config.GetValueOrDefault(propertyName, str =>
+            return configuration.GetValue(propertyName, str =>
             {
-                if (TimeSpan.TryParse(str, out var i))
+                if (Enum.TryParse<TEnum>(str, out var result))
                 {
-                    return i;
+                    return result;
+                }
+
+                return defaultValue;
+            }, logger);
+        }
+
+        public static TimeSpan GetTimeSpan(this IConfiguration configuration, string propertyName, TimeSpan defaultValue, ILogger logger)
+        {
+            return configuration.GetValue(propertyName, str =>
+            {
+                if (TimeSpan.TryParse(str, out var t))
+                {
+                    return t;
+                }
+
+                return defaultValue;
+            }, logger);
+        }
+
+        public static int GetInt(this IConfiguration configuration, string propertyName, int defaultValue, ILogger logger)
+        {
+            return configuration.GetValue(propertyName, str =>
+            {
+                if (int.TryParse(str, out var t))
+                {
+                    return t;
                 }
 
                 return defaultValue;

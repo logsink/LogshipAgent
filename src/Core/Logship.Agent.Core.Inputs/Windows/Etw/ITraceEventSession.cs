@@ -9,6 +9,6 @@ namespace Logship.Agent.Core.Inputs.Windows.Etw
         void DisableProvider(Guid providerGuid);
         void EnableProvider(string providerName, TraceEventLevel maximumEventLevel, ulong enabledKeywordsOptions);
         void DisableProvider(string providerName);
-        void Process(Action<DataRecord> onEvent);
+        void Process(Action<DataRecord> onEvent, CancellationToken token);
     }
 }

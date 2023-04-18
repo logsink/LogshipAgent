@@ -39,6 +39,12 @@ internal partial class PerformanceCountersService : BaseConfiguredService
 
     protected override async Task ExecuteAsync(CancellationToken token)
     {
+        if (false == OperatingSystem.IsWindows())
+        {
+            this.Logger.LogWarning($"Invalid configuration to execute {nameof(PerformanceCountersService)} in a non-Windows environment.");
+            return;
+        }
+
         var counters = this.GetUniqueCountersForQueries(this.counters);
         var counterRefresh = Stopwatch.StartNew();
 
@@ -110,56 +116,47 @@ internal partial class PerformanceCountersService : BaseConfiguredService
             }
             return result.ToString();
         }
-    
     }
 
     private IDictionary<CounterEntryKey, PerformanceCounter> GetUniqueCountersForQueries(IReadOnlyList<string> paths)
     {
-        if (OperatingSystem.IsWindows())
+        var results = new Dictionary<CounterEntryKey, PerformanceCounter>();
+        var counterSearches = paths.Select(CounterSearchEntry.FromString).ToList();
+        foreach (var counterSearch in counterSearches)
         {
-            var results = new Dictionary<CounterEntryKey, PerformanceCounter>();
-
-            var counterSearches = paths.Select(CounterSearchEntry.FromString).ToList();
-
-            foreach (var counterSearch in counterSearches)
+            this.Logger.LogInformation("Searching for counter: \\{searchCategory}({searchName})\\{searchInstance}", counterSearch.Category, counterSearch.Name, counterSearch.Instance);
+            if (false == PerformanceCounterCategory.Exists(counterSearch.Category))
             {
-                this.Logger.LogInformation("Searching for counter: \\{searchCategory}({searchName})\\{searchInstance}", counterSearch.Category, counterSearch.Name, counterSearch.Instance);
-
-                if (false == PerformanceCounterCategory.Exists(counterSearch.Category))
-                {
-                    this.Logger.LogWarning("Counter category {searchCategory} does not exist", counterSearch.Category);
-                    continue;
-                }
-
-                var category = new PerformanceCounterCategory(counterSearch.Category);
-
-                var instances = category.GetInstanceNames()
-                    .Where(instance => FileSystemName.MatchesSimpleExpression(counterSearch.Instance, instance, true))
-                    .ToList();
-
-                if (false == instances.Any())
-                {
-                    this.Logger.LogWarning("Counter: \\{searchCategory}({searchName})\\{searchInstance} matched no instances", counterSearch.Category, counterSearch.Name, counterSearch.Instance);
-                    continue;
-                }
-
-                foreach (var instance in instances.SelectMany(i => category.GetCounters(i).Where(c => FileSystemName.MatchesSimpleExpression(counterSearch.Name, c.CounterName))))
-                {
-                    this.Logger.LogDebug("Found counter: \\{instanceCategory}({instanceCounter})\\{instanceName} for query: \\{searchCategory}({searchName})\\{searchInstance}", instance.CategoryName, instance.CounterName, instance.InstanceName, counterSearch.Category, counterSearch.Name, counterSearch.Instance);
-                    results[new CounterEntryKey(instance.CategoryName, instance.CounterName, instance.InstanceName)] = instance;
-                }
+                this.Logger.LogWarning("Counter category {searchCategory} does not exist", counterSearch.Category);
+                continue;
             }
 
-            return results;
+            var category = new PerformanceCounterCategory(counterSearch.Category);
+
+            var instances = category.GetInstanceNames()
+                .Where(instance => FileSystemName.MatchesSimpleExpression(counterSearch.Instance, instance, true))
+                .ToList();
+
+            if (false == instances.Any())
+            {
+                this.Logger.LogWarning("Counter: \\{searchCategory}({searchName})\\{searchInstance} matched no instances", counterSearch.Category, counterSearch.Name, counterSearch.Instance);
+                continue;
+            }
+
+            foreach (var instance in instances.SelectMany(i => category.GetCounters(i).Where(c => FileSystemName.MatchesSimpleExpression(counterSearch.Name, c.CounterName))))
+            {
+                this.Logger.LogDebug("Found counter: \\{instanceCategory}({instanceCounter})\\{instanceName} for query: \\{searchCategory}({searchName})\\{searchInstance}", instance.CategoryName, instance.CounterName, instance.InstanceName, counterSearch.Category, counterSearch.Name, counterSearch.Instance);
+                results[new CounterEntryKey(instance.CategoryName, instance.CounterName, instance.InstanceName)] = instance;
+            }
         }
 
-        throw new NotImplementedException();
+        return results;
     }
 
     public override void UpdateConfiguration(IConfigurationSection configuration)
     {
-        this.interval = configuration.GetTimeSpanValue(nameof(interval), TimeSpan.FromSeconds(5), this.Logger);
-        this.counterRefreshInterval = configuration.GetTimeSpanValue(nameof(counterRefreshInterval), TimeSpan.FromMinutes(5), this.Logger);
+        this.interval = configuration.GetTimeSpan(nameof(interval), TimeSpan.FromSeconds(5), this.Logger);
+        this.counterRefreshInterval = configuration.GetTimeSpan(nameof(counterRefreshInterval), TimeSpan.FromMinutes(5), this.Logger);
         this.counters = configuration.GetValues(nameof(counters), this.Logger);
     }
 }

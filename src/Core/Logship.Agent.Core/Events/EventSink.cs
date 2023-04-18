@@ -21,6 +21,11 @@ namespace Logship.Agent.Core.Events
 
         public async Task FlushAsync(CancellationToken token)
         {
+            if (token.IsCancellationRequested)
+            {
+                return;
+            }
+
             IReadOnlyCollection<DataRecord> records = await this.buffer.NextAsync(token);
             if (records.Count == 0)
             {

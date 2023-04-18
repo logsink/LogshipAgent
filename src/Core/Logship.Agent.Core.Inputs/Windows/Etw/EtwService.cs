@@ -31,9 +31,9 @@ namespace Logship.Agent.Core.Inputs.Windows.Etw
 
         public override void UpdateConfiguration(IConfigurationSection configuration)
         {
-            this.sessionNamePrefix = configuration.GetValueOrDefault(nameof(sessionNamePrefix), str => str ?? SessionNamePrefix, this.Logger) ?? SessionNamePrefix;
-            this.cleanupOldSessions = configuration.GetValueOrDefault(nameof(cleanupOldSessions), str => bool.TryParse(str, out var result) ? result : true, this.Logger);
-            this.reuseExistingSession = configuration.GetValueOrDefault(nameof(reuseExistingSession), str => bool.TryParse(str, out var result) ? result : true, this.Logger);
+            this.sessionNamePrefix = configuration.GetString(nameof(sessionNamePrefix), SessionNamePrefix, this.Logger);
+            this.cleanupOldSessions = configuration.GetValue(nameof(cleanupOldSessions), str => bool.TryParse(str, out var result) ? result : true, this.Logger);
+            this.reuseExistingSession = configuration.GetValue(nameof(reuseExistingSession), str => bool.TryParse(str, out var result) ? result : true, this.Logger);
 
             var providerSection = configuration.GetSection("providers");
             var newProviders = new List<ProviderConfiguration>();
@@ -80,6 +80,12 @@ namespace Logship.Agent.Core.Inputs.Windows.Etw
 
         protected override async Task ExecuteAsync(CancellationToken token)
         {
+            if (false == OperatingSystem.IsWindows())
+            {
+                this.Logger.LogWarning($"Invalid configuration to execute {nameof(EtwService)} in a non-Windows environment.");
+                return;
+            }
+
             if (this.disposedValue)
             {
                 throw new ObjectDisposedException(nameof(EtwService));
@@ -90,7 +96,7 @@ namespace Logship.Agent.Core.Inputs.Windows.Etw
                 throw new InvalidOperationException($"{nameof(EtwService)} has already been activated");
             }
 
-            if (this.providers.Count() == 0)
+            if (this.providers.Count == 0)
             {
                 return;
             }
@@ -115,7 +121,7 @@ namespace Logship.Agent.Core.Inputs.Windows.Etw
             {
                 try
                 {
-                    this.traceEventSession.Process(this.eventBuffer.Add);
+                    this.traceEventSession.Process(this.eventBuffer.Add, token);
                 }
                 catch (Exception e)
                 {

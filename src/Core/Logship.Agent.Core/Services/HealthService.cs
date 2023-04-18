@@ -42,7 +42,7 @@ namespace Logship.Agent.Core.Services
 
         public override void UpdateConfiguration(IConfigurationSection configuration)
         {
-            this.interval = configuration.GetTimeSpanValue(nameof(this.interval), TimeSpan.FromSeconds(15), this.Logger);
+            this.interval = configuration.GetTimeSpan(nameof(this.interval), TimeSpan.FromSeconds(15), this.Logger);
         }
     }
 }

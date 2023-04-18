@@ -74,7 +74,7 @@ namespace Logship.Agent.Core.Inputs.Windows.Etw
             this.inner.EnableProvider(providerName, maximumEventLevel, enabledKeywords);
         }
 
-        public void Process(Action<DataRecord> onEvent)
+        public void Process(Action<DataRecord> onEvent, CancellationToken token)
         {
             if (this.inner == null)
             {
@@ -98,6 +98,11 @@ namespace Logship.Agent.Core.Inputs.Windows.Etw
                         onEvent(traceEvent.ToEventData());
                     }
                 };
+
+                token.Register(() =>
+                {
+                    this.inner.Stop();
+                });
                 this.inner.Source.Process();
             }
         }

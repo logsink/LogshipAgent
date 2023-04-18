@@ -20,23 +20,22 @@ namespace Logship.Agent.Core.Services
 
         public override void UpdateConfiguration(IConfigurationSection configuration)
         {
-            this.interval = configuration.GetTimeSpanValue(nameof(interval), TimeSpan.FromSeconds(30), this.Logger);
+            this.interval = configuration.GetTimeSpan(nameof(interval), TimeSpan.FromSeconds(30), this.Logger);
         }
 
         protected override async Task ExecuteAsync(CancellationToken token)
         {
             while (false == token.IsCancellationRequested)
             {
-
-                // Delay for the configured push interval
-                await Task.Delay(this.interval, token);
                 try
                 {
+                    // Delay for the configured push interval
+                    await Task.Delay(this.interval, token);
                     this.Logger.LogDebug("Starting event sink flush");
                     await this.eventSink.FlushAsync(token);
                     this.Logger.LogDebug("Successfully flushed metrics");
                 }
-                catch (OperationCanceledException) when (token.IsCancellationRequested) { /* noop */ }
+                catch (OperationCanceledException) when (token.IsCancellationRequested) { break; }
                 catch (Exception ex)
                 {
                     this.Logger.LogError("Failed to flush event sink. {exception}", ex);

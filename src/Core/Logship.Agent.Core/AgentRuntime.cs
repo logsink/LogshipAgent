@@ -30,7 +30,7 @@ namespace Logship.Agent.Core
             this.rootLogger = loggerFactory.CreateLogger(nameof(AgentRuntime));
             this.services = new Dictionary<string, BaseAsyncService>();
 
-            string endpoint = configuration.GetSection("Output").GetRequiredStringValue(nameof(endpoint), this.rootLogger);
+            string endpoint = configuration.GetSection("Output").GetRequiredString(nameof(endpoint), this.rootLogger);
             IEventOutput output = endpoint == "console"
                 ? new ConsoleEventOutput(loggerFactory.CreateLogger(nameof(ConsoleEventOutput)))
                 : new LogshipEventOutput(endpoint, loggerFactory.CreateLogger(nameof(LogshipEventOutput)));
