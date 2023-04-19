@@ -1,6 +1,4 @@
-# Introduction 
-TODO: Give a short introduction of your project. Let this section explain the objectives or the motivation behind this project. 
-
+# Logship Agent [![.NET](https://github.com/logsink/logship-agent/actions/workflows/dotnet.yml/badge.svg)](https://github.com/logsink/logship-agent/actions/workflows/dotnet.yml)
 # Configuration
 
 ## Output
