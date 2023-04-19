@@ -26,5 +26,5 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
     - name: Build the Podman image
       run: |
-        podman build . --file Containerfile --tag logship-agent:$(date +%s)
-        podman push logship-agent:$(date +%s) ghcr.io/${{ github.repository }}/logship-agent:$(date +%s)
+        podman build . --file Containerfile --tag ghcr.io/${{ github.repository }}/logship-agent:$(date +%s)
+        podman push ghcr.io/${{ github.repository }}/logship-agent:$(date +%s)
