@@ -3,8 +3,8 @@ name: Podman Image CI
 on:
   push:
     branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
+    tags:
+      - v*
 
 env:
   REGISTRY: ghcr.io
@@ -26,5 +26,5 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
     - name: Build the Podman image
       run: |
-        podman build . --file Containerfile --tag ghcr.io/${{ github.repository }}:$(date +%s)
-        podman push ghcr.io/${{ github.repository }}:$(date +%s)
+        podman build . --file Containerfile --tag ghcr.io/${{ github.repository }}:$GITHUB_REF
+        podman push ghcr.io/${{ github.repository }}:$GITHUB_REF
