@@ -26,4 +26,6 @@ jobs:
     - name: Build the Podman image
       run: |
         podman build . --file Containerfile --tag ghcr.io/${{ github.repository }}:$GITHUB_REF_NAME
+        podman tag ghcr.io/${{ github.repository }}:$GITHUB_REF_NAME ghcr.io/${{ github.repository }}:latest
         podman push ghcr.io/${{ github.repository }}:$GITHUB_REF_NAME
+        podman push ghcr.io/${{ github.repository }}:latest
