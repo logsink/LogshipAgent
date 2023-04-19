@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ "master" ]
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
 jobs:
 
   build:
@@ -14,5 +18,13 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    - name: Log in to the Container registry
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     - name: Build the Podman image
-      run: podman build . --file Containerfile --tag my-image-name:$(date +%s)
+      run: |
+        podman build . --file Containerfile --tag logship-agent:$(date +%s)
+        podman push logship-agent:$(date +%s) ghcr.io/${{ github.repository }}/logship-agent:$(date +%s)
