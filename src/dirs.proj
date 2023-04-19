@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.Build.Traversal">
   <Sdk Name="Microsoft.Build.CentralPackageVersions" Version="2.0.1" />
   <ItemGroup>
-    <PackageReference Include="Microsoft.VisualStudio.SlnGen"/>
     <ProjectReference Include="**\*.*proj" />
   </ItemGroup>
 </Project>
