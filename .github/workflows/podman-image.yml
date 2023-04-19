@@ -26,5 +26,5 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
     - name: Build the Podman image
       run: |
-        podman build . --file Containerfile --tag ghcr.io/${{ github.repository }}:$GITHUB_REF
-        podman push ghcr.io/${{ github.repository }}:$GITHUB_REF
+        podman build . --file Containerfile --tag ghcr.io/${{ github.repository }}:$GITHUB_REF_NAME
+        podman push ghcr.io/${{ github.repository }}:$GITHUB_REF_NAME
