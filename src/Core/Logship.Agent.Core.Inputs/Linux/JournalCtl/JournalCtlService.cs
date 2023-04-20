@@ -58,6 +58,12 @@ namespace Logship.Agent.Core.Inputs.Linux.JournalCtl
         void RunSync(CancellationToken token)
         {
             using var journal = JournalHandle.Open(this.flags);
+            int seekResult = Interop.sd_journal_seek_tail(journal.DangerousGetHandle());
+            if (seekResult < 0)
+            {
+                Interop.Throw(seekResult, "Error during sd_journal_seek_tail");
+            }
+
             int result;
             int count = 0;
             do
