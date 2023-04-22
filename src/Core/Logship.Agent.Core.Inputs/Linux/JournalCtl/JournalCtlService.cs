@@ -9,6 +9,8 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace Logship.Agent.Core.Inputs.Linux.JournalCtl
@@ -17,7 +19,7 @@ namespace Logship.Agent.Core.Inputs.Linux.JournalCtl
     {
         private readonly IEventBuffer buffer;
         private int flags;
-
+        private HashSet<string> columns;
 
         private class ThreadParams
         {
@@ -36,11 +38,30 @@ namespace Logship.Agent.Core.Inputs.Linux.JournalCtl
         public JournalCtlService(IEventBuffer buffer, ILogger logger) : base(nameof(JournalCtlService), logger)
         {
             this.buffer = buffer;
+            this.columns = new HashSet<string>();
         }
 
         public override void UpdateConfiguration(IConfigurationSection configuration)
         {
             this.flags = configuration.GetInt(nameof(flags), 0, this.Logger);
+            var defaultColumns = new HashSet<string>()
+            {
+                "MESSAGE",
+                "PRIORITY",
+                "SYSLOG_IDENTIFIER",
+                "SYSLOG_FACILITY",
+                "SYSLOG_PID",
+                "SYSLOG_TIMESTAMP",
+                "SYSTEMD_UNIT",
+                "SOURCE_REALTIME_TIMESTAMP",
+            };
+
+            foreach (var column in configuration.GetValues(nameof(columns), this.Logger))
+            {
+                defaultColumns.Add(column);
+            }
+
+            this.columns = defaultColumns;
         }
 
         protected override Task ExecuteAsync(CancellationToken token)
@@ -73,12 +94,12 @@ namespace Logship.Agent.Core.Inputs.Linux.JournalCtl
                 {
                     case 1:
                         count++;
-                        ReadEntry(journal, this.buffer, token);
+                        ReadEntry(journal, token);
                         break;
                     case 0:
                         if (count > 0)
                         {
-                            this.Logger.LogInformation("JournalCtl waiting. Last flush was {count} entries.", count);
+                            this.Logger.LogInformation("JournalCtl blocking. Last flush was {count} entries.", count);
                             count = 0;
                         }
                         WaitForJournal(journal, token);
@@ -95,7 +116,7 @@ namespace Logship.Agent.Core.Inputs.Linux.JournalCtl
             int r;
             do
             {
-                r = Interop.sd_journal_wait(handle.DangerousGetHandle(), 1_000_000);
+                r = Interop.sd_journal_wait(handle.DangerousGetHandle(), 5_000_000);
                 if (r < 0)
                 {
                     Interop.Throw(r, "Failed to wait for new journal entry");
@@ -103,13 +124,14 @@ namespace Logship.Agent.Core.Inputs.Linux.JournalCtl
             } while (false == token.IsCancellationRequested && r == 0);
         }
 
-        static void ReadEntry(JournalHandle journal, IEventBuffer buffer, CancellationToken cancellationToken)
+        void ReadEntry(JournalHandle journal, CancellationToken cancellationToken)
         {
             var fields = new Dictionary<string, object>
             {
                 { "machine", Environment.MachineName },
             };
 
+            var extraData = new Dictionary<string, string>();
             int result;
             do
             {
@@ -132,11 +154,18 @@ namespace Logship.Agent.Core.Inputs.Linux.JournalCtl
                     continue;
                 }
 
-                fields[parts[0]] = parts[1];
+                if (this.columns.Contains(parts[0]))
+                {
+                    fields[parts[0]] = parts[1];
+                }
+                else
+                {
+                    extraData[parts[0]] = parts[1];
+                }
             } while (false == cancellationToken.IsCancellationRequested);
-
             
-            buffer.Add(new Records.DataRecord("Linux.JournalD", DateTimeOffset.UtcNow, fields));
+            fields["ExtraData"] = JsonSerializer.Serialize(extraData, JournalCtlSourceGenerationContext.Default.DictionaryStringString);
+            this.buffer.Add(new Records.DataRecord("Linux.JournalD", DateTimeOffset.UtcNow, fields));
         }
     }
 }
