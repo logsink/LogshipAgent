@@ -1,22 +1,38 @@
 ﻿using Logship.Agent.Core.Records;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Concurrent;
 
 namespace Logship.Agent.Core.Events
 {
     internal class InMemoryBuffer : IEventBuffer
     {
-        private volatile ConcurrentBag<DataRecord> bag;
+        private List<DataRecord> bag;
+        private int maximumBufferSize;
+        private readonly ILogger logger;
+        private readonly object mutex = new();
 
-        public InMemoryBuffer(ILogger logger)
+        public InMemoryBuffer(int maximumBufferSize, ILogger logger)
         {
-            this.bag = new ConcurrentBag<DataRecord>();
+            this.bag = new List<DataRecord>(maximumBufferSize);
+            this.maximumBufferSize = maximumBufferSize;
+            this.logger = logger;
         }
 
         public void Add(DataRecord data)
         {
-            bag.Add(data);
+            bool added = false;
+            lock (mutex) 
+            {
+                if (bag.Count < maximumBufferSize)
+                {
+                    bag.Add(data);
+                    added = true;
+                }
+            }
+
+            if (false == added)
+            {
+                this.logger.LogWarning($"{nameof(DataRecord)} dropped. Consider increasing {nameof(maximumBufferSize)}: {{maximumBufferSize}} records", maximumBufferSize);
+            }
         }
 
         public void Add(IReadOnlyCollection<DataRecord> data)
@@ -34,10 +50,13 @@ namespace Logship.Agent.Core.Events
                 return Task.FromResult<IReadOnlyCollection<DataRecord>>(Array.Empty<DataRecord>());
             }
 
-            var temp = this.bag;
-            this.bag = new ConcurrentBag<DataRecord>();
-            var items = temp.ToArray();
-            temp.Clear();
+            DataRecord[] items;
+            lock (mutex)
+            {
+                items = this.bag.ToArray();
+                this.bag.Clear();
+            }
+
             return Task.FromResult<IReadOnlyCollection<DataRecord>>(items);
         }
     }

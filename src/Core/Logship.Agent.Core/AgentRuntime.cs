@@ -31,12 +31,14 @@ namespace Logship.Agent.Core
             this.services = new Dictionary<string, BaseAsyncService>();
 
             string endpoint = configuration.GetSection("Output").GetRequiredString(nameof(endpoint), this.rootLogger);
+            int maximumBufferSize = configuration.GetSection("Output").GetInt(nameof(maximumBufferSize), 15_000, this.rootLogger);
+
             IEventOutput output = endpoint == "console"
                 ? new ConsoleEventOutput(loggerFactory.CreateLogger(nameof(ConsoleEventOutput)))
                 : new LogshipEventOutput(endpoint, loggerFactory.CreateLogger(nameof(LogshipEventOutput)));
             this.eventSink = new EventSink(
                 output,
-                new InMemoryBuffer(loggerFactory.CreateLogger(nameof(InMemoryBuffer))),
+                new InMemoryBuffer(maximumBufferSize, loggerFactory.CreateLogger(nameof(InMemoryBuffer))),
                 loggerFactory.CreateLogger(nameof(EventSink)));
             this.eventOutput = new PushService(eventSink, loggerFactory.CreateLogger(nameof(PushService)));
         }
