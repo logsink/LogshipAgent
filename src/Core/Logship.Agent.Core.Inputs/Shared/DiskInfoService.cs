@@ -44,6 +44,7 @@ namespace Logship.Agent.Core.Inputs.Shared
                         new Dictionary<string, object>
                         {
                             { "name", drive.Name },
+                            { "machine", Environment.MachineName },
                             { "type", drive.DriveType.ToString() },
                             { "total_size_bytes", drive.TotalSize },
                             { "total_freespace_bytes", drive.TotalFreeSpace },
