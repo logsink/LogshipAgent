@@ -12,6 +12,8 @@ namespace Logship.Agent.Core.Inputs
             factory.RegisterInputService("windows.etw", (b, l) => new EtwService(b, l));
             factory.RegisterInputService("journalctl", (b, l) => new JournalCtlService(b, l));
             factory.RegisterInputService("filesystem", (b, l) => new DiskInfoService(b, l));
+            factory.RegisterInputService("system", (b, l) => new SysInfoService(b, l));
+            factory.RegisterInputService("network", (b, l) => new NetworkInfoService(b, l));
             return factory;
         }
     }

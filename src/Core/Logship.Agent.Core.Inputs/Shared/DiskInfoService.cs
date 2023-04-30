@@ -36,9 +36,8 @@ namespace Logship.Agent.Core.Inputs.Shared
                 var now = DateTimeOffset.UtcNow;
                 foreach (var drive in drives)
                 {
-                    this.Logger.LogTrace("Found drive: {drive} {type} {size} {totalFree} {availableFree}", drive.Name, drive.DriveType, drive.TotalSize, drive.TotalFreeSpace, drive.AvailableFreeSpace);
-
-                    this.eventBuffer.Add(new DataRecord(
+                    this.Logger.LogTrace("Found drive: {drive} {type}", drive.Name, drive.DriveType);
+                    var record = new DataRecord(
                         "filesystem.drives",
                         now,
                         new Dictionary<string, object>
@@ -46,13 +45,20 @@ namespace Logship.Agent.Core.Inputs.Shared
                             { "name", drive.Name },
                             { "machine", Environment.MachineName },
                             { "type", drive.DriveType.ToString() },
-                            { "total_size_bytes", drive.TotalSize },
-                            { "total_freespace_bytes", drive.TotalFreeSpace },
-                            { "available_freespace_bytes", drive.AvailableFreeSpace },
-                            { "volume_label", drive.VolumeLabel },
                             { "root_dir", drive.RootDirectory.FullName },
-                            { "format", drive.DriveFormat }
-                        }));
+                        });
+                    try
+                    {
+                        record.Data.Add("total_size_bytes", drive.TotalSize);
+                        record.Data.Add("total_freespace_bytes", drive.TotalFreeSpace);
+                        record.Data.Add("available_freespace_bytes", drive.AvailableFreeSpace);
+                        record.Data.Add("volume_label", drive.VolumeLabel);
+                        record.Data.Add("format", drive.DriveFormat);
+                    } catch (IOException ex)
+                    {
+                        this.Logger.LogError("Error reading drive {drive}. {exception}", drive.Name, ex);
+                    }
+                    this.eventBuffer.Add(record);
                 }
 
                 await Task.Delay(this.interval, token);
