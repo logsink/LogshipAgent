@@ -29,3 +29,13 @@ jobs:
         podman tag ghcr.io/${{ github.repository }}:$GITHUB_REF_NAME ghcr.io/${{ github.repository }}:latest
         podman push ghcr.io/${{ github.repository }}:$GITHUB_REF_NAME
         podman push ghcr.io/${{ github.repository }}:latest
+    - uses: "marvinpinto/action-automatic-releases@latest"
+      with:
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        automatic_release_tag: "latest"
+        prerelease: true
+        title: "Agent Release ${{ github.ref }}"
+        files: |
+          LICENSE.txt
+          *.jar
+    
