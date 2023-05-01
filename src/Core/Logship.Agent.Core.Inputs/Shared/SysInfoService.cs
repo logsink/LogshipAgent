@@ -14,16 +14,15 @@ namespace Logship.Agent.Core.Inputs.Shared
         protected override Task ExecuteSingleAsync(CancellationToken token)
         {
             var c = CreateRecord("System.Environment");
-            c.Data[nameof(Environment.OSVersion.Platform)] = Environment.OSVersion.Platform;
-            c.Data[nameof(Environment.OSVersion.Version)] = Environment.OSVersion.Version;
-            c.Data[nameof(Environment.OSVersion.VersionString)] = Environment.OSVersion.VersionString;
-            c.Data[nameof(Environment.MachineName)] = Environment.MachineName;
+            c.Data["OSPlatform"] = Environment.OSVersion.Platform.ToString();
+            c.Data["OSVersion"] = Environment.OSVersion.Version.ToString();
+            c.Data["OSVersionString"] = Environment.OSVersion.VersionString;
             c.Data[nameof(Environment.ProcessorCount)] = Environment.ProcessorCount;
             c.Data[nameof(Environment.CommandLine)] = Environment.CommandLine;
             c.Data[nameof(Environment.TickCount64)] = Environment.TickCount64;
             c.Data[nameof(Environment.CurrentDirectory)] = Environment.CurrentDirectory;
             c.Data[nameof(Environment.StackTrace)] = Environment.StackTrace;
-            c.Data[nameof(Environment.Version)] = Environment.Version;
+            c.Data[nameof(Environment.Version)] = Environment.Version.ToString();
             c.Data[nameof(Environment.UserDomainName)] = Environment.UserDomainName;
             c.Data[nameof(Environment.UserInteractive)] = Environment.UserInteractive;
             c.Data[nameof(Environment.UserName)] = Environment.UserName;
