@@ -9,7 +9,7 @@ namespace Logship.Agent.Core.Services
     /// </summary>
     public abstract class BaseAsyncService
     {
-        private readonly string serviceName;
+        protected readonly string serviceName;
 
         private CancellationTokenSource? tokenSource = null;
         private CancellationToken stopToken = default;

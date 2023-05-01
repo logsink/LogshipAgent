@@ -90,7 +90,7 @@ namespace Logship.Agent.Core.Inputs.Shared
             foreach (IPAddress ip in ipAddresses)
             {
                 var c = CreateRecord("System.Network.IP", timestamp);
-                c.Data["ScopeId"] = ip.ScopeId;
+                c.Data["Address"] = ip.ToString();
                 c.Data["AddressFamily"] = ip.AddressFamily.ToString();
                 c.Data["IsIPv4MappedToIPv6"] = ip.IsIPv4MappedToIPv6;
                 c.Data["IsIPv6LinkLocal"] = ip.IsIPv6LinkLocal;
@@ -98,7 +98,6 @@ namespace Logship.Agent.Core.Inputs.Shared
                 c.Data["IsIPv6SiteLocal"] = ip.IsIPv6SiteLocal;
                 c.Data["IsIPv6Teredo"] = ip.IsIPv6Teredo;
                 c.Data["IsIPv6UniqueLocal"] = ip.IsIPv6UniqueLocal;
-                c.Data["Address"] = ip.ToString();
                 this.Buffer.Add(c);
             }
 
@@ -115,6 +114,6 @@ namespace Logship.Agent.Core.Inputs.Shared
             return Task.CompletedTask;
         }
 
-        
+
     }
 }

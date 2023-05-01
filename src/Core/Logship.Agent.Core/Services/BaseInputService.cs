@@ -15,6 +15,8 @@ namespace Logship.Agent.Core.Services
         protected readonly IEventBuffer Buffer;
         protected TimeSpan Interval;
 
+        protected virtual bool ExitOnException { get; set; } = true;
+
         public BaseInputService(IEventBuffer buffer, string serviceName, ILogger logger) : base(serviceName, logger)
         {
             this.Buffer = buffer;
@@ -35,6 +37,14 @@ namespace Logship.Agent.Core.Services
                     await Task.Delay(this.Interval, token);
                 }
                 catch (OperationCanceledException) when (token.IsCancellationRequested) { /* noop */ }
+                catch (Exception ex)
+                {
+                    this.Logger.LogError("Exception during execute service {serviceName}. ExitOnException = {exitOnException}. {exception}", this.serviceName, this.ExitOnException, ex);
+                    if (this.ExitOnException)
+                    {
+                        break;
+                    }
+                }
             }
         }
 
