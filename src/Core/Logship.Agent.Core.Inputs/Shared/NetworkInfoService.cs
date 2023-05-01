@@ -48,7 +48,7 @@ namespace Logship.Agent.Core.Inputs.Shared
                 c.Data["Id"] = ni.Id;
                 c.Data["Type"] = ni.NetworkInterfaceType.ToString();
                 c.Data["IsReceiveOnly"] = ni.IsReceiveOnly;
-                c.Data["OperationalStatus"] = ni.OperationalStatus;
+                c.Data["OperationalStatus"] = ni.OperationalStatus.ToString();
                 c.Data["Speed"] = ni.Speed;
                 c.Data["SupportsMulticast"] = ni.SupportsMulticast;
                 c.Data["SupportsIPv4"] = ni.Supports(NetworkInterfaceComponent.IPv4);
