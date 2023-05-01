@@ -8,11 +8,11 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  DOTNET_VERSION: '7.0.5'
 
 jobs:
 
   build:
-
     runs-on: ubuntu-latest
 
     steps:
@@ -29,6 +29,16 @@ jobs:
         podman tag ghcr.io/${{ github.repository }}:$GITHUB_REF_NAME ghcr.io/${{ github.repository }}:latest
         podman push ghcr.io/${{ github.repository }}:$GITHUB_REF_NAME
         podman push ghcr.io/${{ github.repository }}:latest
+        
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Build
+      run: |
+        dotnet publish src/ConsoleHost/Logship.Agent.ConsoleHost.csproj -c Release -o out -r linux-x64 --self-contained true
+    
     - uses: "marvinpinto/action-automatic-releases@latest"
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
@@ -36,6 +46,5 @@ jobs:
         prerelease: true
         title: "Agent Release ${{ github.ref }}"
         files: |
-          LICENSE.txt
-          *.jar
+          out/Logship.Agent.ConsoleHost
     
