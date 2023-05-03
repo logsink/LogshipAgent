@@ -45,13 +45,15 @@ namespace Logship.Agent.Core.Inputs.Linux.Proc
 
         private void ReadPerProcessStat(int tickRequency)
         {
-            var now = DateTime.UtcNow;
-            foreach (var processDirectory in Directory.EnumerateDirectories("/proc/"))
+            var now = DateTimeOffset.UtcNow;
+            foreach (var processDirectory in Directory.EnumerateDirectories("/proc"))
             {
-                if (false == int.TryParse(Path.GetDirectoryName(processDirectory), out var pid))
+                if (false == int.TryParse(Path.GetFileName(processDirectory), out var pid))
                 {
                     continue;
                 }
+
+                this.Logger.LogTrace("Logging for process {id} {dir}", processDirectory, Path.GetFileName(processDirectory));
 
                 try
                 {
@@ -72,7 +74,7 @@ namespace Logship.Agent.Core.Inputs.Linux.Proc
                             {
                                     { "machine", Environment.MachineName },
                                     { "processId", pid },
-                                    { "executable", processes },
+                                    { "executable", procName },
                                     { "count", numThreads }
                             }));
 
@@ -94,7 +96,7 @@ namespace Logship.Agent.Core.Inputs.Linux.Proc
                             {
                                     { "machine", Environment.MachineName },
                                     { "processId", pid },
-                                    { "executable", processes },
+                                    { "executable", procName },
                                     { "percentage", percentCpu }
                             }));
 
@@ -107,8 +109,9 @@ namespace Logship.Agent.Core.Inputs.Linux.Proc
                         };
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
+                    this.Logger.LogError("Failed to read /proc/{pid}/stat {Ex}", pid, ex); 
                 }
             }
         }
