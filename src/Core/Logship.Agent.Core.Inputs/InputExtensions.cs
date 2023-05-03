@@ -1,4 +1,5 @@
 ﻿using Logship.Agent.Core.Inputs.Linux.JournalCtl;
+using Logship.Agent.Core.Inputs.Linux.Proc;
 using Logship.Agent.Core.Inputs.Shared;
 using Logship.Agent.Core.Inputs.Windows.Etw;
 
@@ -14,6 +15,7 @@ namespace Logship.Agent.Core.Inputs
             factory.RegisterInputService("filesystem", (b, l) => new DiskInfoService(b, l));
             factory.RegisterInputService("system", (b, l) => new SysInfoService(b, l));
             factory.RegisterInputService("network", (b, l) => new NetworkInfoService(b, l));
+            factory.RegisterInputService("proc", (b, l) => new ProcMemReaderService(b, l));
             return factory;
         }
     }
