@@ -55,46 +55,49 @@ namespace Logship.Agent.Core.Inputs.Linux.Proc
                     using (var readerStream = File.OpenRead("/proc/meminfo"))
                     using (var reader = new StreamReader(readerStream))
                     {
-                        var line = reader.ReadLine();
-                        if (string.IsNullOrEmpty(line))
+                        while (true)
                         {
-                            break;
-                        }
-                        var split = line.Split(" ", StringSplitOptions.RemoveEmptyEntries);
-                        var name = split[0].Trim(':');
-                        var size = long.Parse(split[1]);
-                        var multiplier = 1L;
-                        if (split.Length > 2)
-                        {
-                            var sizeStr = split[2];
-                            switch (sizeStr)
+                            var line = reader.ReadLine();
+                            if (string.IsNullOrEmpty(line))
                             {
-                                case "kB":
-                                    multiplier = 1024L;
+                                break;
+                            }
+                            var split = line.Split(" ", StringSplitOptions.RemoveEmptyEntries);
+                            var name = split[0].Trim(':');
+                            var size = long.Parse(split[1]);
+                            var multiplier = 1L;
+                            if (split.Length > 2)
+                            {
+                                var sizeStr = split[2];
+                                switch (sizeStr)
+                                {
+                                    case "kB":
+                                        multiplier = 1024L;
+                                        break;
+                                    case "mB":
+                                        multiplier = 1024L * 1024;
+                                        break;
+                                    case "gB":
+                                        multiplier = 1024L * 1024 * 1024;
+                                        break;
+                                    default:
+                                        this.Logger.LogError("Unknown multiplier: {multiplier}", sizeStr);
+                                        break;
+                                }
+                            }
+
+                            size *= multiplier;
+                            recordLinux.Data.Add(name.Replace("(", "_").Replace(")", "_"), size);
+
+                            switch (name)
+                            {
+                                case "MemTotal":
+                                    recordSystem.Data.Add("TotalMemory", size);
                                     break;
-                                case "mB":
-                                    multiplier = 1024L * 1024;
-                                    break;
-                                case "gB":
-                                    multiplier = 1024L * 1024 * 1024;
-                                    break;
-                                default:
-                                    this.Logger.LogError("Unknown multiplier: {multiplier}", sizeStr);
+                                case "MemFree":
+                                    recordSystem.Data.Add("FreeMemory", size);
                                     break;
                             }
-                        }
-
-                        size *= multiplier;
-                        recordLinux.Data.Add(name.Replace("(", "_").Replace(")", "_"), size);
-
-                        switch(name)
-                        {
-                            case "MemTotal":
-                                recordSystem.Data.Add("TotalMemory", size);
-                                break;
-                            case "MemFree":
-                                recordSystem.Data.Add("FreeMemory", size);
-                                break;
                         }
 
                     }
