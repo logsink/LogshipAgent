@@ -71,6 +71,8 @@ namespace Logship.Agent.Core.Inputs.Linux.Proc
                             new Dictionary<string, object>
                             {
                                     { "machine", Environment.MachineName },
+                                    { "processId", pid },
+                                    { "executable", processes },
                                     { "count", numThreads }
                             }));
 
@@ -91,6 +93,8 @@ namespace Logship.Agent.Core.Inputs.Linux.Proc
                             new Dictionary<string, object>
                             {
                                     { "machine", Environment.MachineName },
+                                    { "processId", pid },
+                                    { "executable", processes },
                                     { "percentage", percentCpu }
                             }));
 
