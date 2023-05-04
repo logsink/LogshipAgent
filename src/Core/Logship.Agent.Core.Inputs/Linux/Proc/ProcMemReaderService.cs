@@ -4,18 +4,20 @@ using Logship.Agent.Core.Records;
 using Logship.Agent.Core.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 
 namespace Logship.Agent.Core.Inputs.Linux.Proc
 {
     internal class ProcMemReaderService : BaseConfiguredService
     {
         private readonly IEventBuffer eventSink;
-
+        private readonly Dictionary<int, ProcPidData> processes;
         private TimeSpan interval = TimeSpan.FromSeconds(5);
 
         public ProcMemReaderService(IEventBuffer buffer, ILogger logger) : base(nameof(JournalCtlService), logger)
         {
             this.eventSink = buffer;
+            this.processes = new Dictionary<int, ProcPidData>();
         }
 
         public override void UpdateConfiguration(IConfigurationSection configuration)
@@ -31,88 +33,167 @@ namespace Logship.Agent.Core.Inputs.Linux.Proc
                 return;
             }
 
+            var clockTicks = int.Parse(await this.ExecuteLinuxCommand("getconf", "CLK_TCK", token));
+
             while (false == token.IsCancellationRequested)
             {
+                this.ReadProcStat();
+                this.ReadPerProcessStat(clockTicks);
+                await Task.Delay(this.interval, token);
+            }
+        }
+
+        private void ReadPerProcessStat(int tickRequency)
+        {
+            var now = DateTime.UtcNow;
+            foreach (var processDirectory in Directory.EnumerateDirectories("/proc/"))
+            {
+                if (false == int.TryParse(Path.GetDirectoryName(processDirectory), out var pid))
+                {
+                    continue;
+                }
+
                 try
                 {
-                    var now = DateTime.UtcNow;
-                    var recordLinux = new DataRecord(
-                        "Linux.Proc.Stat",
-                        now,
-                        new Dictionary<string, object>
-                        {
-                            { "machine", Environment.MachineName },
-                        });
+                    var procName = File.ReadAllText(Path.Combine(processDirectory, "cmdline")).Split(" ")[0];
 
-                    var recordSystem = new DataRecord(
-                        "System.Memory",
-                        now,
-                        new Dictionary<string, object>
-                        {
-                            { "machine", Environment.MachineName },
-                        });
+                    var line = File.ReadAllText(Path.Combine(processDirectory, "stat"));
+                    var split = line.Split(" ", StringSplitOptions.RemoveEmptyEntries);
 
-                    using (var readerStream = File.OpenRead("/proc/meminfo"))
-                    using (var reader = new StreamReader(readerStream))
+                    var userTime = int.Parse(split[13]);
+                    var kernalTIme = int.Parse(split[14]);
+
+                    var numThreads = int.Parse(split[19]);
+
+                    this.eventSink.Add(new DataRecord(
+                            "System.Process.Threads",
+                            now,
+                            new Dictionary<string, object>
+                            {
+                                    { "machine", Environment.MachineName },
+                                    { "count", numThreads }
+                            }));
+
+                    if (false == this.processes.TryGetValue(pid, out var data))
                     {
-                        while (true)
+                        data = new ProcPidData(Stopwatch.StartNew(), procName, pid, userTime, kernalTIme, numThreads);
+                        this.processes.Add(pid, data);
+                    }
+                    else
+                    {
+                        var timeDiff = data.watch.Elapsed;
+                        var totalTicks = timeDiff.TotalSeconds * tickRequency;
+                        var percentCpu = (double)((userTime + kernalTIme) - data.TotalTicks) / (double)totalTicks * 100.0;
+
+                        this.eventSink.Add(new DataRecord(
+                            "System.Process.Cpu",
+                            now,
+                            new Dictionary<string, object>
+                            {
+                                    { "machine", Environment.MachineName },
+                                    { "percentage", percentCpu }
+                            }));
+
+                        this.processes[pid] = data with
                         {
-                            var line = reader.ReadLine();
-                            if (string.IsNullOrEmpty(line))
-                            {
-                                break;
-                            }
-                            var split = line.Split(" ", StringSplitOptions.RemoveEmptyEntries);
-                            var name = split[0].Trim(':');
-                            var size = long.Parse(split[1]);
-                            var multiplier = 1L;
-                            if (split.Length > 2)
-                            {
-                                var sizeStr = split[2];
-                                switch (sizeStr)
-                                {
-                                    case "kB":
-                                        multiplier = 1024L;
-                                        break;
-                                    case "mB":
-                                        multiplier = 1024L * 1024;
-                                        break;
-                                    case "gB":
-                                        multiplier = 1024L * 1024 * 1024;
-                                        break;
-                                    default:
-                                        this.Logger.LogError("Unknown multiplier: {multiplier}", sizeStr);
-                                        break;
-                                }
-                            }
+                            watch = Stopwatch.StartNew(),
+                            kernalTime = kernalTIme,
+                            userTime = userTime,
+                            numThreads = numThreads,
+                        };
+                    }
+                }
+                catch
+                {
+                }
+            }
+        }
 
-                            size *= multiplier;
-                            recordLinux.Data.Add(name.Replace("(", "_").Replace(")", "_"), size);
+        private void ReadProcStat()
+        {
+            try
+            {
+                var now = DateTime.UtcNow;
+                var recordLinux = new DataRecord(
+                    "Linux.Proc.Stat",
+                    now,
+                    new Dictionary<string, object>
+                    {
+                            { "machine", Environment.MachineName },
+                    });
 
-                            switch (name)
+                var recordSystem = new DataRecord(
+                    "System.Memory",
+                    now,
+                    new Dictionary<string, object>
+                    {
+                            { "machine", Environment.MachineName },
+                    });
+
+                using (var readerStream = File.OpenRead("/proc/meminfo"))
+                using (var reader = new StreamReader(readerStream))
+                {
+                    while (true)
+                    {
+                        var line = reader.ReadLine();
+                        if (string.IsNullOrEmpty(line))
+                        {
+                            break;
+                        }
+                        var split = line.Split(" ", StringSplitOptions.RemoveEmptyEntries);
+                        var name = split[0].Trim(':');
+                        var size = long.Parse(split[1]);
+                        var multiplier = 1L;
+                        if (split.Length > 2)
+                        {
+                            var sizeStr = split[2];
+                            switch (sizeStr)
                             {
-                                case "MemTotal":
-                                    recordSystem.Data.Add("TotalMemory", size);
+                                case "kB":
+                                    multiplier = 1024L;
                                     break;
-                                case "MemFree":
-                                    recordSystem.Data.Add("FreeMemory", size);
+                                case "mB":
+                                    multiplier = 1024L * 1024;
+                                    break;
+                                case "gB":
+                                    multiplier = 1024L * 1024 * 1024;
+                                    break;
+                                default:
+                                    this.Logger.LogError("Unknown multiplier: {multiplier}", sizeStr);
                                     break;
                             }
                         }
 
+                        size *= multiplier;
+                        recordLinux.Data.Add(name.Replace("(", "_").Replace(")", "_"), size);
+
+                        switch (name)
+                        {
+                            case "MemTotal":
+                                recordSystem.Data.Add("TotalMemory", size);
+                                break;
+                            case "MemFree":
+                                recordSystem.Data.Add("FreeMemory", size);
+                                break;
+                        }
                     }
 
-                    this.eventSink.Add(recordSystem);
-                    this.eventSink.Add(recordLinux);
                 }
-                catch (Exception ex)
-                {
-                    this.Logger.LogError("Failed to read /proc/stat {Ex}", ex);
-                }
-                
 
-                await Task.Delay(this.interval, token);
+                this.eventSink.Add(recordSystem);
+                this.eventSink.Add(recordLinux);
             }
+            catch (Exception ex)
+            {
+                this.Logger.LogError("Failed to read /proc/stat {Ex}", ex);
+            }
+        }
+
+        private async Task<string> ExecuteLinuxCommand(string command, string args, CancellationToken token)
+        {
+            var process = Process.Start(command, args);
+            await process.WaitForExitAsync(token);
+            return process.StandardOutput.ReadToEnd();
         }
     }
 }
