@@ -195,7 +195,13 @@ namespace Logship.Agent.Core.Inputs.Linux.Proc
 
         private async Task<string> ExecuteLinuxCommand(string command, string args, CancellationToken token)
         {
-            var process = Process.Start(command, args);
+            using var process = Process.Start(new ProcessStartInfo
+            {
+                FileName = command,
+                Arguments = args,
+                RedirectStandardOutput = true,
+                CreateNoWindow = true,
+            })!;
             await process.WaitForExitAsync(token);
             return process.StandardOutput.ReadToEnd();
         }
