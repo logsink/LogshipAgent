@@ -67,6 +67,8 @@ namespace Logship.Agent.Core.Inputs.Linux.Proc
 
                     var numThreads = int.Parse(split[19]);
 
+                    var rssSize = long.Parse(split[23]);
+
                     this.eventSink.Add(new DataRecord(
                             "System.Process.Threads",
                             now,
@@ -76,6 +78,17 @@ namespace Logship.Agent.Core.Inputs.Linux.Proc
                                     { "processId", pid },
                                     { "executable", procName },
                                     { "count", numThreads }
+                            }));
+
+                    this.eventSink.Add(new DataRecord(
+                            "System.Process.Memory",
+                            now,
+                            new Dictionary<string, object>
+                            {
+                                    { "machine", Environment.MachineName },
+                                    { "processId", pid },
+                                    { "executable", processes },
+                                    { "bytes", rssSize }
                             }));
 
                     if (false == this.processes.TryGetValue(pid, out var data))
