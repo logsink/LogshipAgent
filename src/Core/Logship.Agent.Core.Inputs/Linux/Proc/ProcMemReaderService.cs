@@ -87,7 +87,7 @@ namespace Logship.Agent.Core.Inputs.Linux.Proc
                             {
                                     { "machine", Environment.MachineName },
                                     { "processId", pid },
-                                    { "executable", processes },
+                                    { "executable", procName },
                                     { "bytes", rssSizePages * 4 * 1024 } // Convert to bytes.
                             }));
 
