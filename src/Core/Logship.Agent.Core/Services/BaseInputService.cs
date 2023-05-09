@@ -15,6 +15,8 @@ namespace Logship.Agent.Core.Services
         protected readonly IEventBuffer Buffer;
         protected TimeSpan Interval;
 
+        protected virtual TimeSpan DefaultInterval { get; } = TimeSpan.FromSeconds(15);
+
         protected virtual bool ExitOnException { get; set; } = true;
 
         public BaseInputService(IEventBuffer buffer, string serviceName, ILogger logger) : base(serviceName, logger)
@@ -24,7 +26,7 @@ namespace Logship.Agent.Core.Services
 
         public override void UpdateConfiguration(IConfigurationSection configuration)
         {
-            this.Interval = configuration.GetTimeSpan(nameof(Interval), Interval, this.Logger);
+            this.Interval = configuration.GetTimeSpan(nameof(Interval), DefaultInterval, this.Logger);
         }
 
         protected override async Task ExecuteAsync(CancellationToken token)
