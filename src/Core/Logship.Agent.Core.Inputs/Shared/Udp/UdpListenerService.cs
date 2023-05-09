@@ -83,7 +83,7 @@ namespace Logship.Agent.Core.Inputs.Shared.Udp
                 var record = CreateRecord(data.Schema, data.Timestamp);
                 foreach(var kvp in data.Data)
                 {
-                    record.Data[kvp.Key] = kvp.Value;
+                    record.Data[kvp.Key] = kvp.Value.ToString() ?? string.Empty;
                 }
 
                 this.Buffer.Add(record);
