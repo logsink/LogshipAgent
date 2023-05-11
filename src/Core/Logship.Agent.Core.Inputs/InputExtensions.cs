@@ -18,6 +18,7 @@ namespace Logship.Agent.Core.Inputs
             factory.RegisterInputService("network", (b, l) => new NetworkInfoService(b, l));
             factory.RegisterInputService("proc", (b, l) => new ProcMemReaderService(b, l));
             factory.RegisterInputService("udp", (b, l) => new UdpListenerService(b, l));
+            factory.RegisterInputService("processes", (b, l) => new ProcessInfoService(b, l));
             return factory;
         }
     }
