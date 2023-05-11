@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using System.Text.Json;
 
 namespace Logship.Agent.Core.Inputs.Shared.Udp
@@ -17,7 +18,7 @@ namespace Logship.Agent.Core.Inputs.Shared.Udp
         {
         }
 
-        protected override TimeSpan DefaultInterval => TimeSpan.FromMilliseconds(1);
+        protected override TimeSpan DefaultInterval => TimeSpan.Zero;
 
         public override void UpdateConfiguration(IConfigurationSection configuration)
         {
@@ -77,7 +78,41 @@ namespace Logship.Agent.Core.Inputs.Shared.Udp
                 var record = CreateRecord(data.Schema, data.Timestamp);
                 foreach(var kvp in data.Data)
                 {
-                    record.Data[kvp.Key] = kvp.Value.ToString() ?? string.Empty;
+                    if (kvp.Value is JsonElement element)
+                    {
+                        switch (element.ValueKind)
+                        {
+                            case JsonValueKind.Object:
+                            case JsonValueKind.Array:
+                                {
+                                    using var textStream = new MemoryStream();
+                                    var writer = new Utf8JsonWriter(textStream);
+                                    element.WriteTo(writer);
+                                    writer.Flush();
+                                    record.Data[kvp.Key] = Encoding.UTF8.GetString(textStream.ToArray());
+                                }
+                                break;
+                            case JsonValueKind.String:
+                                record.Data[kvp.Key] = element.GetString() ?? string.Empty;
+                                break;
+                            case JsonValueKind.Number:
+                                record.Data[kvp.Key] = element.GetDecimal();
+                                break;
+                            case JsonValueKind.True:
+                                record.Data[kvp.Key] = true;
+                                break;
+                            case JsonValueKind.False:
+                                record.Data[kvp.Key] = false;
+                                break;
+                            case JsonValueKind.Null:
+                            case JsonValueKind.Undefined:
+                                continue;
+                        }
+                    }
+                    else
+                    {
+                        record.Data[kvp.Key] = kvp.Value;
+                    }
                 }
 
                 this.Buffer.Add(record);

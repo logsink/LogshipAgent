@@ -116,7 +116,7 @@ namespace Logship.Agent.Core.Inputs.Shared
                 }
                 catch (ArgumentException)
                 {
-                    this.Logger.LogWarning("Unable to read name of process {pid}.", info.OwningPid);
+                    processName = "unknown";
                 }
             }
 

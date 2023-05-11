@@ -11,6 +11,7 @@ namespace Logship.Agent.Core.Records
     [JsonSerializable(typeof(uint))]
     [JsonSerializable(typeof(float))]
     [JsonSerializable(typeof(double))]
+    [JsonSerializable(typeof(decimal))]
     [JsonSerializable(typeof(Guid))]
     [JsonSerializable(typeof(TimeSpan))]
     [JsonSerializable(typeof(DateTime))]
