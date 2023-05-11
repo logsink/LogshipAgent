@@ -39,22 +39,22 @@ var consoleOptions = new SimpleOptionsMonitor<ConsoleLoggerOptions>(new ConsoleL
     UseUtcTimestamp = true,
 });
 #pragma warning restore CS0618 // Type or member is obsolete
-
+IConfigurationRoot? config = new ConfigurationBuilder()
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile("appsettings.dev.json", optional: true, reloadOnChange: true)
+    .AddJsonFile("appsettings.prod.json", optional: true, reloadOnChange: true)
+    .Build();
 var consoleProvider = new ConsoleLoggerProvider(options: consoleOptions, formatters: null);
 using var loggerFactory = new LoggerFactory(new ILoggerProvider[] { consoleProvider },
     new SimpleOptionsMonitor<LoggerFilterOptions>(new LoggerFilterOptions
     {
-        MinLevel = LogLevel.Debug,
+        MinLevel = config.GetSection("Logging").GetSection("LogLevel").GetEnum("Default", LogLevel.Information, consoleProvider.CreateLogger("ConfigLoad")),
     }),
     Options.Create(new LoggerFactoryOptions
     {
         ActivityTrackingOptions = ActivityTrackingOptions.SpanId | ActivityTrackingOptions.TraceId | ActivityTrackingOptions.ParentId | ActivityTrackingOptions.Tags
     }));
 var log = loggerFactory.CreateLogger("Logship.Agent.ConsoleHost");
-
-IConfigurationRoot? config = new ConfigurationBuilder()
-    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-    .Build();
 if (config == null)
 {
     log.LogCritical("Invalid configuration. Exiting.");

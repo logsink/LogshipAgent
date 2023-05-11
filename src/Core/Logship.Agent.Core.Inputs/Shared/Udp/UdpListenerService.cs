@@ -59,12 +59,6 @@ namespace Logship.Agent.Core.Inputs.Shared.Udp
             }
         }
 
-        protected override async Task OnStop(CancellationToken token)
-        {
-            await base.OnStop(token);
-            this.Dispose();
-        }
-
         private async Task AddUdpMessageAsync(byte[] message, CancellationToken token)
         {
             if (message.Length == 0)

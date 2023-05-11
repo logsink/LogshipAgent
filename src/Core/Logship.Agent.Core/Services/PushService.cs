@@ -31,9 +31,9 @@ namespace Logship.Agent.Core.Services
                 {
                     // Delay for the configured push interval
                     await Task.Delay(this.interval, token);
-                    this.Logger.LogDebug("Starting event sink flush");
+                    this.Logger.LogTrace("Starting event sink flush");
                     await this.eventSink.FlushAsync(token);
-                    this.Logger.LogDebug("Successfully flushed metrics");
+                    this.Logger.LogTrace("Successfully flushed metrics");
                 }
                 catch (OperationCanceledException) when (token.IsCancellationRequested) { break; }
                 catch (Exception ex)
