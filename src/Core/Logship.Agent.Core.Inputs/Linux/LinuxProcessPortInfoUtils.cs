@@ -127,30 +127,23 @@ namespace Logship.Agent.Core.Inputs.Linux
         private static HashSet<long> GetPidInodes(uint pid)
         {
             var inodes = new HashSet<long>();
-            try
+            string fdPath = $"/proc/{pid}/fd";
+            string[] files = Directory.GetFiles(fdPath);
+
+            foreach (string file in files)
             {
-                string fdPath = $"/proc/{pid}/fd";
-                string[] files = Directory.GetFiles(fdPath);
 
-                foreach (string file in files)
+                string target = GetSymbolicLinkTarget(file);
+                if (target?.StartsWith("socket:[") == true)
                 {
-                    string target = GetSymbolicLinkTarget(file);
-                    if (target.StartsWith("socket:["))
+                    int index = target.IndexOf("[") + 1;
+                    int length = target.IndexOf("]") - index;
+                    string inodeString = target.Substring(index, length);
+                    if (long.TryParse(inodeString, out var result))
                     {
-                        int index = target.IndexOf("[") + 1;
-                        int length = target.IndexOf("]") - index;
-                        string inodeString = target.Substring(index, length);
-
-                        if (long.TryParse(inodeString, out var result))
-                        {
-                            inodes.Add(result);
-                        }
+                        inodes.Add(result);
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error finding socket inodes: {0}", ex.Message);
             }
 
             return inodes;
@@ -164,48 +157,8 @@ namespace Logship.Agent.Core.Inputs.Linux
                 var info = new FileInfo(target);
                 target = info.LinkTarget!;
             }
+
             return target;
-        }
-
-        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
-        struct BY_HANDLE_FILE_INFORMATION
-        {
-            public uint FileAttributes;
-            public FILETIME CreationTime;
-            public FILETIME LastAccessTime;
-            public FILETIME LastWriteTime;
-            public uint VolumeSerialNumber;
-            public uint FileSizeHigh;
-            public uint FileSizeLow;
-            public uint NumberOfLinks;
-            public uint FileIndexHigh;
-            public uint FileIndexLow;
-        }
-
-        static bool GetFileInformationByHandle(Microsoft.Win32.SafeHandles.SafeFileHandle hFile, out BY_HANDLE_FILE_INFORMATION lpFileInformation)
-        {
-            lpFileInformation = new BY_HANDLE_FILE_INFORMATION();
-            return GetFileInformationByHandle(hFile.DangerousGetHandle(), ref lpFileInformation);
-        }
-
-        [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
-        static extern bool GetFileInformationByHandle(IntPtr hFile, ref BY_HANDLE_FILE_INFORMATION lpFileInformation);
-
-        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
-        struct FILETIME
-        {
-            public uint DateTimeLow;
-            public uint DateTimeHigh;
-
-            public long ToInt64()
-            {
-                return ((long)DateTimeHigh << 32) | DateTimeLow;
-            }
-
-            public DateTime ToDateTime()
-            {
-                return DateTime.FromFileTimeUtc(ToInt64());
-            }
         }
     }
 }
