@@ -99,7 +99,7 @@ namespace Logship.Agent.Core.Inputs.Linux.JournalCtl
                     case 0:
                         if (count > 0)
                         {
-                            this.Logger.LogInformation("JournalCtl blocking. Last flush was {count} entries.", count);
+                            this.Logger.LogTrace("JournalCtl blocking. Last flush was {count} entries.", count);
                             count = 0;
                         }
                         WaitForJournal(journal, token);

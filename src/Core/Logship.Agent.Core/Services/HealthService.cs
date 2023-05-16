@@ -33,7 +33,8 @@ namespace Logship.Agent.Core.Services
                     { "machine", Environment.MachineName },
                     { "startTime", this.startupTime.ToString("O") },
                     { "interval", this.interval.ToString("c") },
-                    { "value", (DateTimeOffset.UtcNow - this.startupTime).ToString("c") }
+                    { "value", (DateTimeOffset.UtcNow - this.startupTime).ToString("c") },
+                    { "counter", (DateTimeOffset.UtcNow - this.startupTime).Ticks }
                 }));
 
                 await Task.Delay(this.interval, token).ConfigureAwait(false);
