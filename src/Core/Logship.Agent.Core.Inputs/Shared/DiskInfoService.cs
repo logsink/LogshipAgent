@@ -38,22 +38,22 @@ namespace Logship.Agent.Core.Inputs.Shared
                 {
                     this.Logger.LogTrace("Found drive: {drive} {type}", drive.Name, drive.DriveType);
                     var record = new DataRecord(
-                        "filesystem.drives",
+                        "System.Storage",
                         now,
                         new Dictionary<string, object>
                         {
-                            { "name", drive.Name },
+                            { "Name", drive.Name },
                             { "machine", Environment.MachineName },
-                            { "type", drive.DriveType.ToString() },
-                            { "root_dir", drive.RootDirectory.FullName },
+                            { "Type", drive.DriveType.ToString() },
+                            { "RootDir", drive.RootDirectory.FullName },
                         });
                     try
                     {
-                        record.Data.Add("total_size_bytes", drive.TotalSize);
-                        record.Data.Add("total_freespace_bytes", drive.TotalFreeSpace);
-                        record.Data.Add("available_freespace_bytes", drive.AvailableFreeSpace);
-                        record.Data.Add("volume_label", drive.VolumeLabel);
-                        record.Data.Add("format", drive.DriveFormat);
+                        record.Data.Add("TotalSizeBytes", drive.TotalSize);
+                        record.Data.Add("TotalFreespaceBytes", drive.TotalFreeSpace);
+                        record.Data.Add("AvailableFreespaceBytes", drive.AvailableFreeSpace);
+                        record.Data.Add("VolumeLabel", drive.VolumeLabel);
+                        record.Data.Add("Format", drive.DriveFormat);
                     } catch (IOException ex)
                     {
                         this.Logger.LogError("Error reading drive {drive}. {exception}", drive.Name, ex);

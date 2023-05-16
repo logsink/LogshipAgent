@@ -1,8 +1,6 @@
-﻿using Logship.Agent.Core.Configuration;
-using Logship.Agent.Core.Events;
+﻿using Logship.Agent.Core.Events;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using System.Text.Json;
 
 namespace Logship.Agent.Core.Services
 {
@@ -34,7 +32,7 @@ namespace Logship.Agent.Core.Services
                     { "startTime", this.startupTime.ToString("O") },
                     { "interval", this.interval.ToString("c") },
                     { "value", (DateTimeOffset.UtcNow - this.startupTime).ToString("c") },
-                    { "counter", (DateTimeOffset.UtcNow - this.startupTime).Ticks }
+                    { "counter", (DateTimeOffset.UtcNow - this.startupTime).TotalMilliseconds }
                 }));
 
                 await Task.Delay(this.interval, token).ConfigureAwait(false);
