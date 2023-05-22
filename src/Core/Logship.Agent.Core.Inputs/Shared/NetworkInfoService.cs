@@ -21,6 +21,8 @@ namespace Logship.Agent.Core.Inputs.Shared
         {
         }
 
+        protected override bool ExitOnException => false;
+
         protected override Task ExecuteSingleAsync(CancellationToken token)
         {
             var timestamp = DateTimeOffset.UtcNow;

@@ -129,10 +129,8 @@ namespace Logship.Agent.Core.Inputs.Linux
             var inodes = new HashSet<long>();
             string fdPath = $"/proc/{pid}/fd";
             string[] files = Directory.GetFiles(fdPath);
-
             foreach (string file in files)
             {
-
                 string target = GetSymbolicLinkTarget(file);
                 if (target?.StartsWith("socket:[") == true)
                 {

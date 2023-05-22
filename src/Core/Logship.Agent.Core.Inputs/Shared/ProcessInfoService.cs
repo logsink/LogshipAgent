@@ -1,20 +1,16 @@
 ﻿using Logship.Agent.Core.Events;
-using Logship.Agent.Core.Inputs.Windows;
 using Logship.Agent.Core.Records;
 using Logship.Agent.Core.Services;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Logship.Agent.Core.Inputs.Shared
 {
     public class ProcessInfoService : BaseInputService
     {
         protected override TimeSpan DefaultInterval => TimeSpan.FromSeconds(5);
+
+        protected override bool ExitOnException => false;
 
         public ProcessInfoService(IEventBuffer buffer, ILogger logger) : base(buffer, nameof(ProcessInfoService), logger)
         {

@@ -14,6 +14,8 @@ namespace Logship.Agent.Core.Inputs.Shared.Udp
         private UdpClient? udpClient;
         private int port;
 
+        protected override bool ExitOnException => false;
+
         public UdpListenerService(IEventBuffer buffer, ILogger logger) : base(buffer, nameof(UdpListenerService), logger)
         {
         }
