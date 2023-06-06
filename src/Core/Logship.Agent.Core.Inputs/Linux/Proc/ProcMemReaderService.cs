@@ -39,7 +39,52 @@ namespace Logship.Agent.Core.Inputs.Linux.Proc
             {
                 this.ReadProcStat();
                 this.ReadPerProcessStat(clockTicks);
+                this.ReadPerProcessFiles();
+
                 await Task.Delay(this.interval, token);
+            }
+        }
+
+        private void ReadPerProcessFiles()
+        {
+            var now = DateTimeOffset.UtcNow;
+            foreach (var processDirectory in Directory.EnumerateDirectories("/proc"))
+            {
+                if (false == int.TryParse(Path.GetFileName(processDirectory), out var pid))
+                {
+                    continue;
+                }
+
+                this.Logger.LogTrace("Logging files process {id} {dir}", processDirectory, Path.GetFileName(processDirectory));
+
+                try
+                {
+                    var procName = File.ReadAllText(Path.Combine(processDirectory, "cmdline")).Split(" ")[0];
+
+                    foreach (var file in Directory.EnumerateFiles(Path.Combine(processDirectory, "fd")))
+                    {
+                        var info = new FileInfo(file);
+                        if (false == info.Exists || null == info.LinkTarget)
+                        {
+                            continue;
+                        }
+
+                        this.eventSink.Add(new DataRecord(
+                            "System.Process.Files",
+                            now,
+                            new Dictionary<string, object>
+                            {
+                                    { "machine", Environment.MachineName },
+                                    { "processId", pid },
+                                    { "executable", procName },
+                                    { "file", info.LinkTarget }
+                            }));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    this.Logger.LogError(ex, "Failed to log info for process {id}", pid);
+                }
             }
         }
 
