@@ -1,20 +1,22 @@
 ﻿using Logship.Agent.Core.Internals;
 using Logship.Agent.Core.Records;
 using Microsoft.Extensions.Logging;
-using System.Collections.Concurrent;
 
 namespace Logship.Agent.Core.Events
 {
     internal class EventSink : IEventSink, IEventBuffer, IEventOutput, IDisposable
     {
+        private readonly int maximumFlushSize;
         private readonly IEventBuffer buffer;
         private readonly ILogger logger;
         private readonly IEventOutput eventOutput;
         private bool disposedValue;
 
-        public EventSink(IEventOutput eventOutput, IEventBuffer buffer, ILogger logger)
+        public EventSink(int maximumFlushSize, IEventOutput eventOutput, IEventBuffer buffer, ILogger logger)
         {
+            this.maximumFlushSize = maximumFlushSize;
             this.buffer = buffer;
+
             this.logger = Throw.IfArgumentNull(logger, nameof(logger));
             this.eventOutput = Throw.IfArgumentNull(eventOutput, nameof(eventOutput));
         }
@@ -35,7 +37,7 @@ namespace Logship.Agent.Core.Events
             this.logger.LogInformation("Flushing {flushSize} data records.", records.Count);
             try
             {
-                foreach (var batch in records.Chunk(20_000))
+                foreach (var batch in records.Chunk(this.maximumFlushSize))
                 {
                     using var flush = new EventSinkFlushContext(batch, onFailure: this.buffer.Add, logger);
                     flush.Success = await this.eventOutput.SendAsync(batch, token);

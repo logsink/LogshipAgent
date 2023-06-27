@@ -32,11 +32,13 @@ namespace Logship.Agent.Core
 
             string endpoint = configuration.GetSection("Output").GetRequiredString(nameof(endpoint), this.rootLogger);
             int maximumBufferSize = configuration.GetSection("Output").GetInt(nameof(maximumBufferSize), 15_000, this.rootLogger);
+            int maximumFlushSize = configuration.GetSection("Output").GetInt(nameof(maximumFlushSize), 15_000, this.rootLogger);
 
             IEventOutput output = endpoint == "console"
                 ? new ConsoleEventOutput(loggerFactory.CreateLogger(nameof(ConsoleEventOutput)))
                 : new LogshipEventOutput(endpoint, loggerFactory.CreateLogger(nameof(LogshipEventOutput)));
             this.eventSink = new EventSink(
+                maximumFlushSize,
                 output,
                 new InMemoryBuffer(maximumBufferSize, loggerFactory.CreateLogger(nameof(InMemoryBuffer))),
                 loggerFactory.CreateLogger(nameof(EventSink)));
