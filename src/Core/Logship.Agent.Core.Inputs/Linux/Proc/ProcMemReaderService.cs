@@ -14,7 +14,7 @@ namespace Logship.Agent.Core.Inputs.Linux.Proc
         private readonly Dictionary<int, ProcPidData> processes;
         private TimeSpan interval = TimeSpan.FromSeconds(5);
 
-        public ProcMemReaderService(IEventBuffer buffer, ILogger logger) : base(nameof(JournalCtlService), logger)
+        public ProcMemReaderService(IEventBuffer buffer, ILogger logger) : base(nameof(ProcMemReaderService), logger)
         {
             this.eventSink = buffer;
             this.processes = new Dictionary<int, ProcPidData>();
@@ -33,58 +33,14 @@ namespace Logship.Agent.Core.Inputs.Linux.Proc
                 return;
             }
 
-            var clockTicks = int.Parse(await this.ExecuteLinuxCommand("getconf", "CLK_TCK", token));
+            var clockTicks = int.Parse(await ProcHelpers.ExecuteLinuxCommand("getconf", "CLK_TCK", token));
 
             while (false == token.IsCancellationRequested)
             {
                 this.ReadProcStat();
                 this.ReadPerProcessStat(clockTicks);
-                this.ReadPerProcessFiles();
 
                 await Task.Delay(this.interval, token);
-            }
-        }
-
-        private void ReadPerProcessFiles()
-        {
-            var now = DateTimeOffset.UtcNow;
-            foreach (var processDirectory in Directory.EnumerateDirectories("/proc"))
-            {
-                if (false == int.TryParse(Path.GetFileName(processDirectory), out var pid))
-                {
-                    continue;
-                }
-
-                this.Logger.LogTrace("Logging files process {id} {dir}", processDirectory, Path.GetFileName(processDirectory));
-
-                try
-                {
-                    var procName = File.ReadAllText(Path.Combine(processDirectory, "cmdline")).Split(" ")[0];
-
-                    foreach (var file in Directory.EnumerateFiles(Path.Combine(processDirectory, "fd")))
-                    {
-                        var info = new FileInfo(file);
-                        if (false == info.Exists || null == info.LinkTarget)
-                        {
-                            continue;
-                        }
-
-                        this.eventSink.Add(new DataRecord(
-                            "System.Process.Files",
-                            now,
-                            new Dictionary<string, object>
-                            {
-                                    { "machine", Environment.MachineName },
-                                    { "processId", pid },
-                                    { "executable", procName },
-                                    { "file", info.LinkTarget }
-                            }));
-                    }
-                }
-                catch (Exception ex)
-                {
-                    this.Logger.LogError(ex, "Failed to log info for process {id}", pid);
-                }
             }
         }
 
@@ -252,19 +208,6 @@ namespace Logship.Agent.Core.Inputs.Linux.Proc
             {
                 this.Logger.LogError("Failed to read /proc/stat {Ex}", ex);
             }
-        }
-
-        private async Task<string> ExecuteLinuxCommand(string command, string args, CancellationToken token)
-        {
-            using var process = Process.Start(new ProcessStartInfo
-            {
-                FileName = command,
-                Arguments = args,
-                RedirectStandardOutput = true,
-                CreateNoWindow = true,
-            })!;
-            await process.WaitForExitAsync(token);
-            return process.StandardOutput.ReadToEnd();
         }
     }
 }
