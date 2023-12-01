@@ -93,6 +93,11 @@ namespace Logship.Agent.Core
             return result;
         }
 
+        public static Guid GetRequiredGuid(this IConfiguration config, string propertyName, ILogger logger)
+        {
+            return config.GetRequiredValue(propertyName, str => Guid.Parse(str), logger);
+        }
+
         public static string GetRequiredString(this IConfiguration config, string propertyName, ILogger logger)
         {
             return config.GetRequiredValue(propertyName, str => str, logger);
