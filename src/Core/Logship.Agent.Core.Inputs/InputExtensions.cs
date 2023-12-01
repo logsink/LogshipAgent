@@ -20,6 +20,7 @@ namespace Logship.Agent.Core.Inputs
             factory.RegisterInputService("proc.openfiles", (b, I) => new ProcFileReaderService(b, I));
             factory.RegisterInputService("udp", (b, l) => new UdpListenerService(b, l));
             factory.RegisterInputService("processes", (b, l) => new ProcessInfoService(b, l));
+            factory.RegisterInputService("healthcheck", (b, l) => new HealthCheckService(b, l));
             return factory;
         }
     }

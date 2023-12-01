@@ -136,6 +136,19 @@ namespace Logship.Agent.Core
             }, logger);
         }
 
+        public static bool GetBool(this IConfiguration configuration, string propertyName, bool defaultValue, ILogger logger)
+        {
+            return configuration.GetValue(propertyName, str =>
+            {
+                if (bool.TryParse(str, out var t))
+                {
+                    return t;
+                }
+
+                return defaultValue;
+            }, logger);
+        }
+
         public static TimeSpan GetTimeSpan(this IConfiguration configuration, string propertyName, TimeSpan defaultValue, ILogger logger)
         {
             return configuration.GetValue(propertyName, str =>
