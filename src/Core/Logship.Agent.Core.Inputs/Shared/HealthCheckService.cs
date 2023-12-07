@@ -138,7 +138,6 @@ namespace Logship.Agent.Core.Inputs.Shared
                 { "timestamp", state.End.ToString("O") },
                 { "interval", state.Target.Interval.ToString("c") },
                 { "message", state.Exception!.Message },
-                { "exception", state.Exception.ToString() },
             }));
 
             return Task.CompletedTask;
