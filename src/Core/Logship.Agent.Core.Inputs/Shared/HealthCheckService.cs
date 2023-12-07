@@ -86,11 +86,23 @@ namespace Logship.Agent.Core.Inputs.Shared
             using var client = new HttpClient();
             var start = DateTime.UtcNow;
             Logger.LogInformation("Starting HealthCheck on {Endpoint}", target.Endpoint.ToString());
-            var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.Get, target.Endpoint), token);
-            var done = DateTime.UtcNow;
-            var state = new HealthCheckState(target, start, done, response);
-            Logger.LogInformation("Finished HealthCheck on {Endpoint}", target.Endpoint.ToString());
-            await PushResponse(state, token);
+
+            HealthCheckState state;
+            try
+            {
+                using var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.Get, target.Endpoint), token);
+                var done = DateTime.UtcNow;
+                state = new HealthCheckState(target, start, done, response);
+                await PushResponse(state, token);
+                Logger.LogInformation("Finished HealthCheck on {Endpoint}", target.Endpoint.ToString());
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, ex.Message);
+                state = new HealthCheckState(target, start, DateTime.UtcNow, ex);
+                await PushException(state, token);
+            }
+
             return state;
         }
 
@@ -114,6 +126,22 @@ namespace Logship.Agent.Core.Inputs.Shared
                 { "headers", headers },
                 { "body", body },
             }));
+        }
+
+        private Task PushException(HealthCheckState state, CancellationToken token)
+        {
+            this.sink.Add(new Records.DataRecord("Logship.Agent.HealthChecks.Exceptions", DateTimeOffset.UtcNow, new Dictionary<string, object>
+            {
+                { "machine", Environment.MachineName },
+                { "endpoint", state.Target.Endpoint.ToString() },
+                { "startTimeUtc", state.Start.ToString("O") },
+                { "timestamp", state.End.ToString("O") },
+                { "interval", state.Target.Interval.ToString("c") },
+                { "message", state.Exception!.Message },
+                { "exception", state.Exception.ToString() },
+            }));
+
+            return Task.CompletedTask;
         }
 
         public override void UpdateConfiguration(IConfigurationSection configuration)
@@ -142,6 +170,7 @@ namespace Logship.Agent.Core.Inputs.Shared
             public DateTime Start;
             public DateTime End;
             public HttpResponseMessage? ResponseMessage;
+            public Exception? Exception;
 
             public HealthCheckState(HealthCheckTarget target, DateTime start, DateTime end, HttpResponseMessage? responseMessage)
             {
@@ -149,6 +178,16 @@ namespace Logship.Agent.Core.Inputs.Shared
                 Start = start;
                 End = end;
                 ResponseMessage = responseMessage;
+                Exception = null!;
+            }
+
+            public HealthCheckState(HealthCheckTarget target, DateTime start, DateTime end, Exception? exception)
+            {
+                Target = target;
+                Start = start;
+                End = end;
+                ResponseMessage = null!;
+                Exception = exception;
             }
         }
     }
