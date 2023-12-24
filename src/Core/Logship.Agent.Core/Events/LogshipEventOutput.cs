@@ -8,12 +8,14 @@ namespace Logship.Agent.Core.Events
     public class LogshipEventOutput : IEventOutput, IDisposable
     {
         private readonly string endpoint;
+        private readonly Guid subscription;
         private readonly ILogger logger;
         private readonly HttpClient client;
 
-        public LogshipEventOutput(string endpoint, ILogger logger)
+        public LogshipEventOutput(string endpoint, Guid subscription, ILogger logger)
         {
             this.endpoint = endpoint;
+            this.subscription = subscription;
             this.logger = logger;
             this.client = client = new HttpClient();
         }
@@ -38,7 +40,7 @@ namespace Logship.Agent.Core.Events
             }
 
             memoryStream.Position = 0;
-            var request = new HttpRequestMessage(HttpMethod.Put, $"{this.endpoint}/inflow/{Guid.Empty}")
+            var request = new HttpRequestMessage(HttpMethod.Put, $"{this.endpoint}/inflow/{this.subscription}")
             {
                 Content = new StreamContent(memoryStream)
             };

@@ -93,6 +93,11 @@ namespace Logship.Agent.Core
             return result;
         }
 
+        public static Guid GetRequiredGuid(this IConfiguration config, string propertyName, ILogger logger)
+        {
+            return config.GetRequiredValue(propertyName, str => Guid.Parse(str), logger);
+        }
+
         public static string GetRequiredString(this IConfiguration config, string propertyName, ILogger logger)
         {
             return config.GetRequiredValue(propertyName, str => str, logger);
@@ -125,6 +130,19 @@ namespace Logship.Agent.Core
                 if (Enum.TryParse<TEnum>(str, out var result))
                 {
                     return result;
+                }
+
+                return defaultValue;
+            }, logger);
+        }
+
+        public static bool GetBool(this IConfiguration configuration, string propertyName, bool defaultValue, ILogger logger)
+        {
+            return configuration.GetValue(propertyName, str =>
+            {
+                if (bool.TryParse(str, out var t))
+                {
+                    return t;
                 }
 
                 return defaultValue;
