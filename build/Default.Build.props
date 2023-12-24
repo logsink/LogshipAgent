@@ -12,7 +12,7 @@
  </PropertyGroup>
 
  <PropertyGroup>
-    <NetCoreVersion>net7.0</NetCoreVersion>
+    <NetCoreVersion>net8.0</NetCoreVersion>
  </PropertyGroup>
 
  <Import Project="$(MSBuildThisFileDirectory)\slngen\slngen.props" />
