@@ -7,6 +7,7 @@ COPY . ./
 RUN dotnet publish src/ConsoleHost/Logship.Agent.ConsoleHost.csproj -c Release -o out
 
 FROM mcr.microsoft.com/dotnet/runtime-deps:8.0-jammy-chiseled
+RUN apt-get update && apt-get install libsystemd-dev -y && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build-env /app/out .
 ENTRYPOINT ["./Logship.Agent.ConsoleHost"]
