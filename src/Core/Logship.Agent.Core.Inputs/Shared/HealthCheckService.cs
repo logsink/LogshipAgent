@@ -59,13 +59,7 @@ namespace Logship.Agent.Core.Inputs.Shared
                     lock (_mutex)
                     {
                         this.healthChecks.Remove(completedTask);
-                        var duration = DateTime.UtcNow - state.Start;
-                        if (duration <= TimeSpan.Zero)
-                        {
-                            duration = TimeSpan.Zero;
-                        }
-
-                        this.healthChecks.Add(PerformHealthCheckWithDelay(state.Target, state.Target.Interval - duration, token));
+                        this.healthChecks.Add(PerformHealthCheckWithDelay(state.Target, state.Target.Interval, token));
                     }
                 }
                 catch (Exception ex)
