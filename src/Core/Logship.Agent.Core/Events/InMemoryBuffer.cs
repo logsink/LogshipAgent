@@ -10,6 +10,9 @@ namespace Logship.Agent.Core.Events
         private readonly ILogger logger;
         private readonly object mutex = new();
 
+        const long OverflowWarnLogInterval = 5000;
+        private long counter = OverflowWarnLogInterval;
+
         public InMemoryBuffer(int maximumBufferSize, ILogger logger)
         {
             this.bag = new List<DataRecord>(maximumBufferSize);
@@ -31,7 +34,15 @@ namespace Logship.Agent.Core.Events
 
             if (false == added)
             {
-                this.logger.LogWarning($"{nameof(DataRecord)} dropped. Consider increasing {nameof(maximumBufferSize)}: {{maximumBufferSize}} records", maximumBufferSize);
+                if(Interlocked.CompareExchange(ref counter, 0L, OverflowWarnLogInterval) == OverflowWarnLogInterval)
+                {
+                    this.logger.LogWarning($"{nameof(DataRecord)} dropped. Consider increasing {nameof(maximumBufferSize)}: {{maximumBufferSize}} records", maximumBufferSize);
+                }
+                else
+                {
+                    Interlocked.Increment(ref counter);
+                    this.logger.LogTrace($"{nameof(DataRecord)} dropped. Consider increasing {nameof(maximumBufferSize)}: {{maximumBufferSize}} records", maximumBufferSize);
+                }
             }
         }
 

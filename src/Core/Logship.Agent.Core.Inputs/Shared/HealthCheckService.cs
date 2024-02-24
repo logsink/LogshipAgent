@@ -113,7 +113,7 @@ namespace Logship.Agent.Core.Inputs.Shared
                 { "machine", Environment.MachineName },
                 { "endpoint", state.Target.Endpoint.ToString() },
                 { "startTimeUtc", state.Start.ToString("O") },
-                { "timestamp", state.End.ToString("O") },
+                { "endTimeUtc", state.End.ToString("O") },
                 { "interval", state.Target.Interval.ToString("c") },
                 { "status", ((int?)state.ResponseMessage?.StatusCode) ?? -1 },
                 { "latencyMillis", (int)(state.End - state.Start).TotalMilliseconds },
