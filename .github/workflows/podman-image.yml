@@ -38,6 +38,7 @@ jobs:
             out/Logship.Agent.ConsoleHost.exe
   
   container-release:
+    if: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -60,17 +61,21 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - name: Download Artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: out/
+      
+      - name: Display structure of downloaded files
+        run: ls -R out/
           
       - uses: "marvinpinto/action-automatic-releases@latest"
+        if: false
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "latest"
-          prerelease: false
+          prerelease: true
           draft: true
           title: "Agent Release ${{ github.ref }}"
           files: |
-            **/Logship.Agent.ConsoleHost
-            **/Logship.Agent.ConsoleHost.exe
+            out/Logship.Agent.ConsoleHost
+            out/Logship.Agent.ConsoleHost.exe
     
