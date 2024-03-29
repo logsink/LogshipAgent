@@ -30,7 +30,7 @@ jobs:
           dotnet publish src/ConsoleHost/Logship.Agent.ConsoleHost.csproj -c Release -o out --self-contained true
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.os }}
           path: |
