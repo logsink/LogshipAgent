@@ -1,23 +1,26 @@
-﻿using Logship.Agent.Core.Records;
+﻿using Logship.Agent.Core.Configuration;
+using Logship.Agent.Core.Records;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Logship.Agent.Core.Events
 {
-    internal class InMemoryBuffer : IEventBuffer
+    internal sealed class InMemoryBuffer : IEventBuffer
     {
         private List<DataRecord> bag;
         private int maximumBufferSize;
-        private readonly ILogger logger;
+        private readonly ILogger<InMemoryBuffer> logger;
         private readonly object mutex = new();
 
         const long OverflowWarnLogInterval = 5000;
         private long counter = OverflowWarnLogInterval;
 
-        public InMemoryBuffer(int maximumBufferSize, ILogger logger)
+        public InMemoryBuffer(IOptions<OutputConfiguration> outputConfig, ILogger<InMemoryBuffer> logger)
         {
             this.bag = new List<DataRecord>(maximumBufferSize);
-            this.maximumBufferSize = maximumBufferSize;
+            this.maximumBufferSize = outputConfig.Value.MaximumBufferSize;
             this.logger = logger;
+            EventsLog.BufferSize(logger, this.maximumBufferSize);
         }
 
         public void Add(DataRecord data)
@@ -36,12 +39,12 @@ namespace Logship.Agent.Core.Events
             {
                 if(Interlocked.CompareExchange(ref counter, 0L, OverflowWarnLogInterval) == OverflowWarnLogInterval)
                 {
-                    this.logger.LogWarning($"{nameof(DataRecord)} dropped. Consider increasing {nameof(maximumBufferSize)}: {{maximumBufferSize}} records", maximumBufferSize);
+                    MemoryBufferLog.WarnDataRecordDropped(this.logger, maximumBufferSize);
                 }
                 else
                 {
                     Interlocked.Increment(ref counter);
-                    this.logger.LogTrace($"{nameof(DataRecord)} dropped. Consider increasing {nameof(maximumBufferSize)}: {{maximumBufferSize}} records", maximumBufferSize);
+                    MemoryBufferLog.TraceDataRecordDropped(this.logger, maximumBufferSize);
                 }
             }
         }
@@ -70,5 +73,19 @@ namespace Logship.Agent.Core.Events
 
             return Task.FromResult<IReadOnlyCollection<DataRecord>>(items);
         }
+
+        public bool BlockAdditions(bool block)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    internal static partial class MemoryBufferLog
+    {
+        [LoggerMessage(LogLevel.Warning, "Record dropped. Consider increasing maximumBufferSize: {MaximumBufferSize}")]
+        public static partial void WarnDataRecordDropped(ILogger logger, int maximumBufferSize);
+
+        [LoggerMessage(LogLevel.Trace, "Record dropped. Consider increasing maximumBufferSize: {MaximumBufferSize}")]
+        public static partial void TraceDataRecordDropped(ILogger logger, int maximumBufferSize);
     }
 }

@@ -1,56 +1,25 @@
-﻿using Logship.Agent.Core.Events;
+﻿using Logship.Agent.Core.Configuration;
+using Logship.Agent.Core.Events;
 using Logship.Agent.Core.Records;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Logship.Agent.Core.Services
 {
-    public abstract class BaseInputService : BaseConfiguredService
+    public abstract class BaseInputService<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)]TConfig
+    > : BaseConfiguredService<TConfig>
+        where TConfig : BaseInputConfiguration, new()
     {
-        protected readonly IEventBuffer Buffer;
-        protected TimeSpan Interval;
-
-        protected virtual TimeSpan DefaultInterval { get; } = TimeSpan.FromSeconds(15);
+        protected IEventBuffer Buffer { get; init; }
 
         protected virtual bool ExitOnException { get; set; } = true;
 
-        public BaseInputService(IEventBuffer buffer, string serviceName, ILogger logger) : base(serviceName, logger)
+        public BaseInputService(TConfig? config, IEventBuffer buffer, string serviceName, ILogger logger)
+            : base(serviceName, config, logger)
         {
             this.Buffer = buffer;
         }
-
-        public override void UpdateConfiguration(IConfigurationSection configuration)
-        {
-            this.Interval = configuration.GetTimeSpan(nameof(Interval), DefaultInterval, this.Logger);
-        }
-
-        protected override async Task ExecuteAsync(CancellationToken token)
-        {
-            while (false == token.IsCancellationRequested)
-            {
-                try
-                {
-                    await this.ExecuteSingleAsync(token);
-                    await Task.Delay(this.Interval, token);
-                }
-                catch (OperationCanceledException) when (token.IsCancellationRequested) { /* noop */ }
-                catch (Exception ex)
-                {
-                    this.Logger.LogError("Exception during execute service {serviceName}. ExitOnException = {exitOnException}. {exception}", this.serviceName, this.ExitOnException, ex);
-                    if (this.ExitOnException)
-                    {
-                        break;
-                    }
-                }
-            }
-        }
-
-        protected abstract Task ExecuteSingleAsync(CancellationToken token);
 
         protected static DataRecord CreateRecord(string schema, DateTimeOffset? timestamp = null)
         {

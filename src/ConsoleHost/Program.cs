@@ -1,89 +1,123 @@
 ﻿using Logship.Agent.ConsoleHost;
-using Logship.Agent.Core;
-using Logship.Agent.Core.Inputs;
-using Microsoft.Extensions.Configuration;
+using Logship.Agent.Core.Configuration;
+using Logship.Agent.Core.Configuration.Validators;
+using Logship.Agent.Core.Services;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Console;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
-using System.Text.Json;
-using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
-using var tokenSource = new CancellationTokenSource();
-Console.CancelKeyPress += Console_CancelKeyPress;
-AppDomain.CurrentDomain.UnhandledException += AppDomain_UnhandledException;
-
-var watch = Stopwatch.StartNew();
-// var consoleProvider = new ConsoleLoggerProvider(options: consoleOptions, formatters: null);
-
-void Console_CancelKeyPress(object? sender, ConsoleCancelEventArgs e)
+internal sealed class Program
 {
-    tokenSource.Cancel();
-    e.Cancel = true;
-}
-
-void AppDomain_UnhandledException(object? sender, UnhandledExceptionEventArgs e)
-{
-    tokenSource.Cancel();
-}
-
-Activity.DefaultIdFormat = ActivityIdFormat.W3C;
-Activity.ForceDefaultIdFormat = true;
-
-#pragma warning disable CS0618 // Type or member is obsolete
-var consoleOptions = new SimpleOptionsMonitor<ConsoleLoggerOptions>(new ConsoleLoggerOptions
-{
-    //FormatterName = ConsoleFormatterNames.Systemd,
-    Format = ConsoleLoggerFormat.Systemd,
-    IncludeScopes = true,
-    UseUtcTimestamp = true,
-});
-#pragma warning restore CS0618 // Type or member is obsolete
-IConfigurationRoot? config = new ConfigurationBuilder()
-    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-    .AddJsonFile("appsettings.dev.json", optional: true, reloadOnChange: true)
-    .AddJsonFile("appsettings.prod.json", optional: true, reloadOnChange: true)
-    .Build();
-var consoleProvider = new ConsoleLoggerProvider(options: consoleOptions, formatters: null);
-using var loggerFactory = new LoggerFactory(new ILoggerProvider[] { consoleProvider },
-    new SimpleOptionsMonitor<LoggerFilterOptions>(new LoggerFilterOptions
+    private static async Task Main(string[] args)
     {
-        MinLevel = config.GetSection("Logging").GetSection("LogLevel").GetEnum("Default", LogLevel.Information, consoleProvider.CreateLogger("ConfigLoad")),
-    }),
-    Options.Create(new LoggerFactoryOptions
+        using var tokenSource = new CancellationTokenSource();
+        ILogger<Program>? logger = null;
+        Console.CancelKeyPress += (object? sender, ConsoleCancelEventArgs e) => Console_CancelKeyPress(sender, e, tokenSource, logger);
+        AppDomain.CurrentDomain.UnhandledException += (object sender, UnhandledExceptionEventArgs e) => AppDomain_UnhandledException(sender, e, tokenSource, logger);
+        Activity.DefaultIdFormat = ActivityIdFormat.W3C;
+        Activity.ForceDefaultIdFormat = true;
+
+        var watch = Stopwatch.StartNew();
+        var builder = Host.CreateApplicationBuilder(args);
+        builder.Logging.ClearProviders()
+            .AddSystemdConsole(_ =>
+            {
+                _.IncludeScopes = true;
+                _.UseUtcTimestamp = true;
+            }).Configure(_ =>
+            {
+                _.ActivityTrackingOptions |= ActivityTrackingOptions.SpanId
+                    | ActivityTrackingOptions.TraceId
+                    | ActivityTrackingOptions.ParentId
+                    | ActivityTrackingOptions.Tags;
+            });
+
+        builder.Services
+            .Configure<OutputConfiguration>(builder.Configuration.GetSection("Output"))
+            .Configure<SourcesConfiguration>(builder.Configuration.GetSection("Sources"))
+            .AddSingleton<IValidateOptions<OutputConfiguration>, OutputConfigurationValidator>()
+            .AddSingleton<IValidateOptions<SourcesConfiguration>, SourcesConfigurationValidator>()
+            .AddAgentServices();
+        using var app = builder.Build();
+        logger = app.Services.GetRequiredService<ILogger<Program>>();
+        try
+        {
+            app.Services.GetRequiredService<IValidateOptions<OutputConfiguration>>()
+                .Validate("Output", app.Services.GetRequiredService<IOptions<OutputConfiguration>>().Value);
+            app.Services.GetRequiredService<IValidateOptions<SourcesConfiguration>>()
+                .Validate("Sources", app.Services.GetRequiredService<IOptions<SourcesConfiguration>>().Value);
+        }
+        catch (OptionsValidationException ex)
+        {
+            ProgramExtensions.Log_ValidationFailed(logger, ex);
+            Environment.Exit(-1);
+            return;
+        }
+        
+        try
+        {
+            await app.StartAsync(tokenSource.Token);
+            ProgramExtensions.Log_AgentStarted(logger, watch.ElapsedMilliseconds);
+            await Task.Delay(-1, tokenSource.Token);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+
+
+        try
+        {
+            using var shutdownToken = new CancellationTokenSource();
+            ProgramExtensions.Log_AgentStopping(logger, watch.ElapsedMilliseconds);
+            watch.Restart();
+            shutdownToken.CancelAfter(5000);
+            await app.StopAsync(shutdownToken.Token);
+            ProgramExtensions.Log_AgentStopped(logger, watch.ElapsedMilliseconds);
+        }
+        catch (OperationCanceledException)
+        {
+            ProgramExtensions.Log_AgentStopCancelled(logger, watch.ElapsedMilliseconds);
+        }
+
+        ProgramExtensions.Log_AgentComplete(logger);
+    }
+
+    private static void Console_CancelKeyPress(object? sender, ConsoleCancelEventArgs e, CancellationTokenSource? tokenSource, ILogger<Program>? logger)
     {
-        ActivityTrackingOptions = ActivityTrackingOptions.SpanId | ActivityTrackingOptions.TraceId | ActivityTrackingOptions.ParentId | ActivityTrackingOptions.Tags
-    }));
-var log = loggerFactory.CreateLogger("Logship.Agent.ConsoleHost");
-if (config == null)
-{
-    log.LogCritical("Invalid configuration. Exiting.");
-    return;
-}
+        if (logger != null)
+        {
+            if (tokenSource != null && tokenSource.IsCancellationRequested)
+            {
+                ProgramExtensions.Log_ForceExit(logger);
+                Environment.Exit(-2);
+                return;
+            }
 
-using var agent = new AgentRuntimeFactory(config, loggerFactory)
-    .RegisterInputs()
-    .Build();
+            ProgramExtensions.Log_CancelKeyPress(logger);
+        }
 
-try
-{
-    await agent.StartAsync(tokenSource.Token);
-    watch.Stop();
-    log.LogInformation("{timestamp} - Logship Agent started. Startup duration was {durationMs}ms", DateTimeOffset.UtcNow, watch.ElapsedMilliseconds);
-    await Task.Delay(-1, tokenSource.Token);
-}
-catch (OperationCanceledException)
-{
-}
+        if (tokenSource != null
+            && false == tokenSource.IsCancellationRequested)
+        {
+            tokenSource.Cancel();
+        }
 
-try
-{
-    using var shutdownToken = new CancellationTokenSource();
-    shutdownToken.CancelAfter(5000);
-    log.LogInformation("{timestamp} - Logship Agent stopping. Startup duration was {durationMs}ms", DateTimeOffset.UtcNow, watch.ElapsedMilliseconds);
-    await agent.StopAsync(shutdownToken.Token);
-    log.LogInformation("{timestamp} - Logship Agent stopped. Startup duration was {durationMs}ms", DateTimeOffset.UtcNow, watch.ElapsedMilliseconds);
-}
-catch (OperationCanceledException)
-{
+        e.Cancel = true;
+    }
+
+    private static void AppDomain_UnhandledException(object? sender, UnhandledExceptionEventArgs e, CancellationTokenSource? tokenSource, ILogger<Program>? logger)
+    {
+        if (logger != null)
+        {
+            ProgramExtensions.Log_AppDomain_UnhandledException(logger, (Exception)e.ExceptionObject);
+        }
+
+        if (tokenSource != null
+            && false == tokenSource.IsCancellationRequested)
+        {
+            tokenSource.Cancel();
+        }
+    }
 }

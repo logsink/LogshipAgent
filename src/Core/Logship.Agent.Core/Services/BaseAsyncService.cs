@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 
@@ -7,20 +8,21 @@ namespace Logship.Agent.Core.Services
     /// <summary>
     /// The base asynchronous service runner.
     /// </summary>
-    public abstract class BaseAsyncService
+    public abstract class BaseAsyncService : IHostedService
     {
-        protected readonly string serviceName;
+        protected string ServiceName { get; init; }
+        private CancellationTokenSource? tokenSource;
+        private CancellationToken stopToken;
 
-        private CancellationTokenSource? tokenSource = null;
-        private CancellationToken stopToken = default;
+        private Task? executionTask;
 
-        private Task? executionTask = null;
+        protected bool Enabled { get; init; } = true;
 
         protected BaseAsyncService(
             string serviceName,
             ILogger logger)
         {
-            this.serviceName = serviceName;
+            this.ServiceName = serviceName;
             this.Logger = logger;
         }
 
@@ -33,8 +35,14 @@ namespace Logship.Agent.Core.Services
         {
             if (this.executionTask != null && false == this.executionTask.IsCompleted)
             {
-                Environment.FailFast($"Critical invalid operation while starting task: {this.serviceName}. This task is already running.");
-                throw new Exception();
+                Environment.FailFast($"Critical invalid operation while starting task: {this.ServiceName}. This task is already running.");
+                return Task.CompletedTask;
+            }
+
+            if (false == this.Enabled)
+            {
+                ServiceLog.ServiceDisabledSkipStart(Logger);
+                return Task.CompletedTask;
             }
 
             this.executionTask = Task.Run(this.ExecuteAsyncWrapper, cancellationToken);
@@ -43,6 +51,11 @@ namespace Logship.Agent.Core.Services
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
+            if (false == this.Enabled)
+            {
+                return;
+            }
+
             this.stopToken = cancellationToken;
             this.tokenSource?.Cancel();
             var execution = this.executionTask;
@@ -54,7 +67,7 @@ namespace Logship.Agent.Core.Services
 
         private async Task ExecuteAsyncWrapper()
         {
-            using var activity = new Activity("Exec-" + this.serviceName);
+            using var activity = new Activity("Exec-" + this.ServiceName);
             using var scope = this.Logger.BeginScope("");
             var tokenSource = new CancellationTokenSource();
             this.tokenSource = tokenSource;
@@ -62,42 +75,44 @@ namespace Logship.Agent.Core.Services
 
             try
             {
-                this.Logger.LogInformation("Starting service: {serviceName}", this.serviceName);
+                BaseAsyncServiceLog.StartedProcess(Logger, nameof(OnStart), this.ServiceName);
                 await this.OnStart(token);
-                this.Logger.LogInformation("Finished starting service: {serviceName}", this.serviceName);
+                BaseAsyncServiceLog.FinishedProcess(Logger, nameof(OnStart), this.ServiceName);
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested) { /* noop */ }
             catch (Exception ex)
             {
-                this.Logger.LogCritical("Failed to start service {serviceName} with exception {exception}", this.serviceName, ex);
-                Environment.FailFast($"Failed to start service {this.serviceName} with exception {ex}");
+                BaseAsyncServiceLog.StartupException(Logger, this.ServiceName, ex);
+                Environment.FailFast($"Failed to start service {this.ServiceName} with exception {ex}");
             }
 
             try
             {
-                this.Logger.LogInformation("Beginning runner loop for service: {serviceName}", this.serviceName);
+                BaseAsyncServiceLog.StartedProcess(Logger, nameof(ExecuteAsync), this.ServiceName);
                 await this.ExecuteAsync(token);
-                this.Logger.LogInformation("Finished runner loop for service: {serviceName}", this.serviceName);
+                BaseAsyncServiceLog.FinishedProcess(Logger, nameof(ExecuteAsync), this.ServiceName);
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested) { /* noop */ }
             catch (Exception ex)
             {
-                this.Logger.LogCritical("Exception thrown to runner in service {serviceName}. {exception}", this.serviceName, ex);
-                Environment.FailFast($"Exception thrown to runner in service {this.serviceName}. {ex}");
+                BaseAsyncServiceLog.RunnerException(Logger, this.ServiceName, ex);
+                Environment.FailFast($"Exception thrown to runner in service {this.ServiceName}. {ex}");
             }
 
             try
             {
+                BaseAsyncServiceLog.StartedProcess(Logger, nameof(OnStop), this.ServiceName);
                 await this.OnStop(this.stopToken);
+                BaseAsyncServiceLog.FinishedProcess(Logger, nameof(OnStop), this.ServiceName);
             }
             catch (OperationCanceledException) when (this.stopToken.IsCancellationRequested) { /* noop */ }
             catch (Exception ex)
             {
-                this.Logger.LogCritical("Exception thrown during shutdown in service {serviceName}. {exception}", this.serviceName, ex);
-                Environment.FailFast($"Exception thrown during shutdown in service {this.serviceName}. {ex}");
+                BaseAsyncServiceLog.ShutdownException(Logger, this.ServiceName, ex);
+                Environment.FailFast($"Exception thrown during shutdown in service {this.ServiceName}. {ex}");
             }
 
-            this.Logger.LogInformation("Successfully stopped service: {name}", this.serviceName);
+            BaseAsyncServiceLog.StoppedService(this.Logger, this.ServiceName);
         }
 
         protected virtual Task OnStart(CancellationToken token) => Task.CompletedTask;
@@ -112,5 +127,26 @@ namespace Logship.Agent.Core.Services
         /// <param name="token"></param>
         /// <returns></returns>
         protected abstract Task ExecuteAsync(CancellationToken token);
+    }
+
+    internal static partial class BaseAsyncServiceLog
+    {
+        [LoggerMessage(LogLevel.Information, "Successfully stopped service: {ServiceName}")]
+        public static partial void StoppedService(ILogger logger, string serviceName);
+
+        [LoggerMessage(LogLevel.Critical, "Exception thrown during shutdown in service {ServiceName}.")]
+        public static partial void ShutdownException(ILogger logger, string serviceName, Exception ex);
+
+        [LoggerMessage(LogLevel.Critical, "Exception thrown to runner in service {ServiceName}.")]
+        public static partial void RunnerException(ILogger logger, string serviceName, Exception ex);
+
+        [LoggerMessage(LogLevel.Critical, "Exception thrown during startup in service {ServiceName}.")]
+        public static partial void StartupException(ILogger logger, string serviceName, Exception ex);
+
+        [LoggerMessage(LogLevel.Information, "Started process {Process} for {ServiceName}.")]
+        public static partial void StartedProcess(ILogger logger, string process, string serviceName);
+
+        [LoggerMessage(LogLevel.Information, "Finished process {Process} for {ServiceName}.")]
+        public static partial void FinishedProcess(ILogger logger, string process, string serviceName);
     }
 }

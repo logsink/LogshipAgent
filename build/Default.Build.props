@@ -4,15 +4,21 @@
  </PropertyGroup>
 
  <PropertyGroup>
-    <SrcRoot>$(RepoRoot)\src</SrcRoot>
-    <BuildRoot>$(RepoRoot)\build</BuildRoot>
-
+	<SrcRoot>$(RepoRoot)src</SrcRoot>
+    <BuildRoot>$(RepoRoot)build</BuildRoot>
+    <TreatWarningsAsErrors Condition="'$(TreatWarningsAsErrors)' == ''">True</TreatWarningsAsErrors>
+    <CentralPackagesFile>$(BuildRoot)\packages\Packages.props</CentralPackagesFile>
+    <NoWarn>$(NoWarn);CS8981</NoWarn>
     <CentralPackagesFile>$(BuildRoot)\packages\Packages.props</CentralPackagesFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
  </PropertyGroup>
 
  <PropertyGroup>
     <NetCoreVersion>net8.0</NetCoreVersion>
+	<NetStandardVersion>netstandard2.0</NetStandardVersion>
+	<RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
+    <IsAotCompatible>true</IsAotCompatible>
+	<AnalysisLevel>latest-Recommended</AnalysisLevel>
  </PropertyGroup>
 
  <Import Project="$(MSBuildThisFileDirectory)\slngen\slngen.props" />

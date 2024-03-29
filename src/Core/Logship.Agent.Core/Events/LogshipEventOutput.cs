@@ -1,23 +1,26 @@
 ﻿using Logship.Agent.Core.Configuration;
 using Logship.Agent.Core.Records;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using System.Net;
 using System.Text.Json;
 
 namespace Logship.Agent.Core.Events
 {
-    public class LogshipEventOutput : IEventOutput, IDisposable
+    internal sealed class LogshipEventOutput : IEventOutput, IDisposable
     {
         private readonly string endpoint;
         private readonly Guid subscription;
-        private readonly ILogger logger;
+        private readonly ILogger<LogshipEventOutput> logger;
         private readonly HttpClient client;
 
-        public LogshipEventOutput(string endpoint, Guid subscription, ILogger logger)
+        public LogshipEventOutput(IOptions<OutputConfiguration> config, IHttpClientFactory httpClientFactory, ILogger<LogshipEventOutput> logger)
         {
-            this.endpoint = endpoint;
-            this.subscription = subscription;
+            this.endpoint = config.Value.Endpoint;
+            this.subscription = config.Value.Subscription;
             this.logger = logger;
-            this.client = client = new HttpClient();
+            this.client = httpClientFactory.CreateClient();
+            EventsLog.Endpoint(logger, this.endpoint, this.subscription);
         }
 
         public void Dispose()
@@ -53,26 +56,42 @@ namespace Logship.Agent.Core.Events
 
             try
             {
-                this.logger.LogDebug("Pushing metrics...");
+                EventOutputLog.PushingMetics(this.logger);
                 var response = await this.client.SendAsync(request, cancellationToken);
                 if (response.IsSuccessStatusCode)
                 {
-                    this.logger.LogDebug("Successfully pushed metrics.");
+                    EventOutputLog.PushingMeticsSuccessful(this.logger);
                 }
                 else
                 {
-                    this.logger.LogError("Failed to push HTTP metrics to {requestUrl}. {status} {message}", response.RequestMessage!.RequestUri, response.StatusCode, response.Content.ToString());
+                    EventOutputLog.PushingMeticsFailed(this.logger, response.RequestMessage!.RequestUri, response.StatusCode, response.Content.ToString() ?? string.Empty);
                     return false;
                 }
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { /* noop */ }
             catch (Exception ex)
             {
-                this.logger.LogError("Failed to push metrics. {error}", ex.Message);
+                EventOutputLog.PushingMetricsException(this.logger, ex);
                 throw;
             }
 
             return true;
         }
+    }
+
+    internal static partial class EventOutputLog
+    {
+        [LoggerMessage(LogLevel.Debug, "Pushing metrics...")]
+        public static partial void PushingMetics(ILogger logger);
+
+        [LoggerMessage(LogLevel.Debug, "Successfully pushed metrics.")]
+        public static partial void PushingMeticsSuccessful(ILogger logger);
+
+        [LoggerMessage(LogLevel.Error, "Failed to push HTTP metrics to {RequestUrl}. {Status} {Message}")]
+        public static partial void PushingMeticsFailed(ILogger logger, Uri? requestUrl, HttpStatusCode status, string message);
+
+        [LoggerMessage(LogLevel.Error, "Failed to push metrics.")]
+        public static partial void PushingMetricsException(ILogger logger, Exception exception);
+
     }
 }

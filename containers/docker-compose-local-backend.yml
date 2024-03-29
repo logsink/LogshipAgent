@@ -1,0 +1,23 @@
+version: "3.9"
+services:
+  logship-database:
+    container_name: "logship-database"
+    image: cr.logship.io/logship-database:latest-pre
+    ports:
+      - "5000:5000"
+    restart: always
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+    volumes:
+      - ./logship-database/appsettings.json:/app/appsettings.json:ro
+      - ./data:/logship
+  logship-frontend:
+    container_name: "logship-frontend"
+    image: cr.logship.io/logship-frontend:latest-pre
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+    volumes:
+      - ./logship-frontend/appsettings.json:/app/appsettings.json:ro

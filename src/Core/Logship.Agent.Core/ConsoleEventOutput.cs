@@ -1,15 +1,14 @@
 ﻿using Logship.Agent.Core.Events;
 using Logship.Agent.Core.Records;
 using Microsoft.Extensions.Logging;
-using System.Text;
 
 namespace Logship.Agent.Core
 {
-    internal class ConsoleEventOutput : IEventOutput
+    internal sealed class ConsoleEventOutput : IEventOutput
     {
-        private readonly ILogger logger;
+        private readonly ILogger<ConsoleEventOutput> logger;
 
-        public ConsoleEventOutput(ILogger logger)
+        public ConsoleEventOutput(ILogger<ConsoleEventOutput> logger)
         {
             this.logger = logger;
         }
@@ -21,16 +20,21 @@ namespace Logship.Agent.Core
             {
                 if (cancellationToken.IsCancellationRequested)
                 {
-                    logger.LogWarning("Console output cancellation requested.");
                     break;
                 }
 
                 var keys = string.Join(',', group.SelectMany(_ => _.Data.Keys).Distinct().Order());
                 int count = group.Count();
-                logger.LogInformation("Sending Record Group {count} \"{schema}\" with data keys: {keys}", count, group.Key, keys);
+                ConsoleEventLog.SendingRecords(this.logger, count, group.Key, keys);
             }
 
             return Task.FromResult(true);
         }
+    }
+
+    internal static partial class ConsoleEventLog
+    {
+        [LoggerMessage(LogLevel.Information, "Sending Record Group {Count} \"{Schema}\" with data keys: {Keys}")]
+        public static partial void SendingRecords(ILogger logger, int count, string schema, string keys);
     }
 }

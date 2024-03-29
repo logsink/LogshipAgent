@@ -363,3 +363,5 @@ FodyWeavers.xsd
 
 !build/*
 !build/packages/*
+
+containers/data/

@@ -1,20 +1,29 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Logship.Agent.Core.Configuration;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Microsoft.Extensions.Options;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Logship.Agent.Core.Services
 {
-    public abstract class BaseConfiguredService : BaseAsyncService
+    public abstract class BaseConfiguredService<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)]TConfig
+        > : BaseAsyncService
+        where TConfig : BaseInputConfiguration, new()
     {
-        protected BaseConfiguredService(string serviceName, ILogger logger)
+        protected TConfig Config { get; }
+
+        protected BaseConfiguredService(string serviceName, TConfig? config, ILogger logger)
             : base(serviceName, logger)
         {
-        }
+            if (config == null)
+            {
+                this.Config = new TConfig();
+                this.Enabled = false;
+                return;
+            }
 
-        public abstract void UpdateConfiguration(IConfigurationSection configuration);
+            this.Config = config!;
+            this.Enabled = config!.Enabled;
+        }
     }
 }

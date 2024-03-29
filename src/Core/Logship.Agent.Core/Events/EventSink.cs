@@ -1,10 +1,12 @@
-﻿using Logship.Agent.Core.Internals;
+﻿using Logship.Agent.Core.Configuration;
+using Logship.Agent.Core.Internals;
 using Logship.Agent.Core.Records;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Logship.Agent.Core.Events
 {
-    internal class EventSink : IEventSink, IEventBuffer, IEventOutput, IDisposable
+    internal sealed class EventSink : IEventSink, IEventBuffer, IEventOutput, IDisposable
     {
         private readonly int maximumFlushSize;
         private readonly IEventBuffer buffer;
@@ -12,11 +14,10 @@ namespace Logship.Agent.Core.Events
         private readonly IEventOutput eventOutput;
         private bool disposedValue;
 
-        public EventSink(int maximumFlushSize, IEventOutput eventOutput, IEventBuffer buffer, ILogger logger)
+        public EventSink(IOptions<OutputConfiguration> config, IEventOutput eventOutput, IEventBuffer buffer, ILogger<EventSink> logger)
         {
-            this.maximumFlushSize = maximumFlushSize;
+            this.maximumFlushSize = config.Value.MaximumFlushSize;
             this.buffer = buffer;
-
             this.logger = Throw.IfArgumentNull(logger, nameof(logger));
             this.eventOutput = Throw.IfArgumentNull(eventOutput, nameof(eventOutput));
         }
@@ -34,7 +35,7 @@ namespace Logship.Agent.Core.Events
                 return;
             }
 
-            this.logger.LogInformation("Flushing {flushSize} data records.", records.Count);
+            EventSinkLog.FlushingRecords(this.logger, records.Count);
             try
             {
                 foreach (var batch in records.Chunk(this.maximumFlushSize))
@@ -46,12 +47,12 @@ namespace Logship.Agent.Core.Events
             catch (OperationCanceledException) when (token.IsCancellationRequested) { /* noop */ }
             catch (Exception ex)
             {
-                this.logger.LogError("An exception occurred during flush: {exception}", ex);
+                EventSinkLog.Exception(this.logger, ex);
                 throw;
             }
         }
 
-        class EventSinkFlushContext : IDisposable
+        sealed class EventSinkFlushContext : IDisposable
         {
             private readonly ILogger logger;
             private readonly Action<IReadOnlyCollection<DataRecord>> onFailure;
@@ -71,7 +72,7 @@ namespace Logship.Agent.Core.Events
                 this.Success = false;
             }
 
-            protected virtual void Dispose(bool disposing)
+            private void Dispose(bool disposing)
             {
                 if (!disposedValue)
                 {
@@ -79,7 +80,7 @@ namespace Logship.Agent.Core.Events
                     {
                         if (false == this.Success)
                         {
-                            this.logger.LogWarning("EventSink flush failed. Re-inserting {count} records.", records.Count);
+                            EventSinkLog.FlushFailed(this.logger, records.Count);
                             this.onFailure(this.records);
                         }
                     }
@@ -96,7 +97,7 @@ namespace Logship.Agent.Core.Events
             }
         }
 
-        protected virtual void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
             if (!disposedValue)
             {
@@ -145,5 +146,17 @@ namespace Logship.Agent.Core.Events
         {
             return buffer.NextAsync(token);
         }
+    }
+
+    internal static partial class EventSinkLog
+    {
+        [LoggerMessage(LogLevel.Information, "Flushing {FlushSize} data records.")]
+        public static partial void FlushingRecords(ILogger logger, int flushSize);
+
+        [LoggerMessage(LogLevel.Error, "An exception occurred during flush")]
+        public static partial void Exception(ILogger logger, Exception exception);
+
+        [LoggerMessage(LogLevel.Warning, "EventSink flush failed. Re-inserting {Count} records.")]
+        public static partial void FlushFailed(ILogger logger, int count);
     }
 }
