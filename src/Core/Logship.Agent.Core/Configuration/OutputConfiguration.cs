@@ -31,7 +31,7 @@ namespace Logship.Agent.Core.Configuration
 		[ConfigurationKeyName("maximumBufferSize")]
         public int MaximumBufferSize { get; set; } = 10_000;
 
-        [Range(5_000, 1_000_000)]
+        [Range(1_000, 1_000_000)]
         [JsonPropertyName("maximumFlushSize")]
 		[ConfigurationKeyName("maximumFlushSize")]
         public int MaximumFlushSize { get; set; } = 10_000;
