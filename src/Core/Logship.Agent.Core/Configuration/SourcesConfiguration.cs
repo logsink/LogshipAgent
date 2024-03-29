@@ -30,8 +30,8 @@ namespace Logship.Agent.Core.Configuration
         public SystemInformationConfiguration? SystemInformation { get; set; }
 
         [ValidateObjectMembers]
-        [JsonPropertyName("Network")]
-		[ConfigurationKeyName("Network")]
+        [JsonPropertyName("NetworkInformation")]
+		[ConfigurationKeyName("NetworkInformation")]
         public NetworkInformationConfiguration? Network { get; set; }
 
         [ValidateObjectMembers]
@@ -45,8 +45,8 @@ namespace Logship.Agent.Core.Configuration
         public ProcOpenFilesConfiguration? ProcOpenFiles { get; set; }
 
         [ValidateObjectMembers]
-        [JsonPropertyName("System.Process")]
-		[ConfigurationKeyName("System.Process")]
+        [JsonPropertyName("ProcessInformation")]
+		[ConfigurationKeyName("ProcessInformation")]
         public SystemProcessesConfiguration? Processes { get; set; }
 
         [ValidateObjectMembers]
