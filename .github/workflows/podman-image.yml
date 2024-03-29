@@ -1,9 +1,9 @@
 name: Build & Release
 
-on: push
-  # push:
-  #   tags:
-  #     - v*
+on:
+  push:
+    tags:
+      - v*
 
 env:
   REGISTRY: ghcr.io
@@ -61,24 +61,18 @@ jobs:
     runs-on: ubuntu-latest
     name: Release ${{ github.ref_name }}
     needs: build
+    if: startsWith(github.ref, 'refs/tags/')
     steps:
       - uses: actions/download-artifact@v4
         with:
           path: out/
-      
-      - name: Display structure of downloaded files
-        run: |
-          echo "${{ github.ref_name }}"
-          ls -R out/
           
       - uses: "marvinpinto/action-automatic-releases@latest"
-        if: false
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           prerelease: false
           draft: false
           title: "Agent Release ${{ github.ref_name }}"
           files: |
-            out/Logship.Agent.ConsoleHost
-            out/Logship.Agent.ConsoleHost.exe
-    
+            out/**/*
+
