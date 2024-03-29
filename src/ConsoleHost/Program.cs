@@ -16,6 +16,14 @@ internal sealed class Program
         ILogger<Program>? logger = null;
         Console.CancelKeyPress += (object? sender, ConsoleCancelEventArgs e) => Console_CancelKeyPress(sender, e, tokenSource, logger);
         AppDomain.CurrentDomain.UnhandledException += (object sender, UnhandledExceptionEventArgs e) => AppDomain_UnhandledException(sender, e, tokenSource, logger);
+        using var sigTermRegistration = System.Runtime.InteropServices.PosixSignalRegistration.Create(System.Runtime.InteropServices.PosixSignal.SIGTERM, _ =>
+        {
+            if (tokenSource != null && false == tokenSource.IsCancellationRequested)
+            {
+                tokenSource?.Cancel();
+            }
+        });
+
         Activity.DefaultIdFormat = ActivityIdFormat.W3C;
         Activity.ForceDefaultIdFormat = true;
 
