@@ -46,7 +46,7 @@ jobs:
         run: |
           Get-ChildItem ".\out\Logship.Agent.ConsoleHost.exe", `
             ".\out\Logship.Agent.ConsoleHost" `
-            ".\out\appsettings.json" |
+            ".\out\appsettings.json" -ErrorAction SilentlyContinue |
             Compress-Archive -DestinationPath "LogshipAgent-${{ matrix.runtime }}.zip"
 
       - name: Upload Artifact
