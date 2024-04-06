@@ -23,13 +23,18 @@ jobs:
             os: windows-latest
           - runtime: linux-x64
             os: ubuntu-latest
-          # - runtime: linux-arm64
-          #   os: ubuntu-latest
+          - runtime: linux-arm64
+            os: ubuntu-latest
           
     name: Build
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: ARM dependencies
+        if: and(equals(${{ matrix.os }}, 'ubuntu-latest'), equals(${{ matrix.runtime }}, 'linux-arm64'))
+        run: |
+          sudo apt-get install gcc make gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu
 
       - name: Setup .NET Core
         uses: actions/setup-dotnet@v4
