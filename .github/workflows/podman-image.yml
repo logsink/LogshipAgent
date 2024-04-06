@@ -34,7 +34,7 @@ jobs:
       - name: ARM dependencies
         if: ${{ matrix.os == 'ubuntu-latest' && matrix.runtime == 'linux-arm64' }}
         run: |
-          sudo apt-get install clang llvm gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu zlib1g-dev
+          sudo apt-get install gcc make gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu zlib1g-dev
 
       - name: Setup .NET Core
         uses: actions/setup-dotnet@v4
