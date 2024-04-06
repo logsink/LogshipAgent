@@ -29,12 +29,8 @@ internal sealed class Program
 
         var watch = Stopwatch.StartNew();
         var builder = Host.CreateApplicationBuilder(args);
-        builder.Logging.ClearProviders()
-            .AddSystemdConsole(_ =>
-            {
-                _.IncludeScopes = true;
-                _.UseUtcTimestamp = true;
-            }).Configure(_ =>
+        builder.Logging
+            .Configure(_ =>
             {
                 _.ActivityTrackingOptions |= ActivityTrackingOptions.SpanId
                     | ActivityTrackingOptions.TraceId
@@ -43,6 +39,11 @@ internal sealed class Program
             });
 
         builder.Services
+            .AddSystemd()
+            .AddWindowsService(_ =>
+            {
+                _.ServiceName = "Logship.Agent";
+            })
             .Configure<OutputConfiguration>(builder.Configuration.GetSection("Output"))
             .Configure<SourcesConfiguration>(builder.Configuration.GetSection("Sources"))
             .AddSingleton<IValidateOptions<OutputConfiguration>, OutputConfigurationValidator>()
