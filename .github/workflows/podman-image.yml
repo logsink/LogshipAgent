@@ -4,8 +4,6 @@ on:
   push:
     tags:
       - v*
-  pull_request:
-    branches: [ "master" ]
 
 env:
   REGISTRY: ghcr.io
@@ -48,8 +46,8 @@ jobs:
       - name: Package
         shell: pwsh
         run: |
-          Get-ChildItem ".\out\Logship.Agent.ConsoleHost.exe", ".\out\Logship.Agent.ConsoleHost",".\out\appsettings.json" -ErrorAction SilentlyContinue |
-            Compress-Archive -DestinationPath "LogshipAgent-${{ matrix.runtime }}.zip"
+          Get-ChildItem ".\out\Logship.Agent.ConsoleHost.exe", ".\out\Logship.Agent.ConsoleHost", ".\out\appsettings.json" -ErrorAction SilentlyContinue |
+          Compress-Archive -DestinationPath "LogshipAgent-${{ matrix.runtime }}.zip"
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
