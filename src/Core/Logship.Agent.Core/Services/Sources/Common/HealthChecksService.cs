@@ -55,17 +55,17 @@ namespace Logship.Agent.Core.Inputs.Common
                 {
                     var completedTask = await Task.WhenAny(this.healthChecks);
                     var state = await completedTask;
-                    
+
                     lock (_mutex)
                     {
                         this.healthChecks.Remove(completedTask);
                         this.healthChecks.Add(PerformHealthCheckWithDelay(state.Target, state.Target.Interval, token));
                     }
                 }
+                catch (OperationCanceledException) when (token.IsCancellationRequested) { }
                 catch (Exception ex)
                 {
                     HealthCheckLog.Error(this.Logger, ex);
-
                 }
             }
         }

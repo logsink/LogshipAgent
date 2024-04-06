@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - v*
+  pull_request:
+    branches: [ "master" ]
 
 env:
   REGISTRY: ghcr.io
@@ -14,11 +16,25 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        include:
+          - runtime: win-x64
+            os: windows-latest
+          - runtime: win-arm64
+            os: windows-latest
+          - runtime: linux-x64
+            os: ubuntu-latest
+          # - runtime: linux-arm64
+          #   os: ubuntu-latest
+          
     name: Build
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: ARM dependencies
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.runtime == 'linux-arm64' }}
+        run: |
+          sudo apt-get install gcc make gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu zlib1g-dev
 
       - name: Setup .NET Core
         uses: actions/setup-dotnet@v4
@@ -27,15 +43,20 @@ jobs:
       
       - name: Build
         run: |
-          dotnet publish src/ConsoleHost/Logship.Agent.ConsoleHost.csproj -c Release -o out --self-contained true
+          dotnet publish src/ConsoleHost/Logship.Agent.ConsoleHost.csproj -c Release -r ${{ matrix.runtime }} -o out --self-contained true
+
+      - name: Package
+        shell: pwsh
+        run: |
+          Get-ChildItem ".\out\Logship.Agent.ConsoleHost.exe", ".\out\Logship.Agent.ConsoleHost",".\out\appsettings.json" -ErrorAction SilentlyContinue |
+            Compress-Archive -DestinationPath "LogshipAgent-${{ matrix.runtime }}.zip"
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.os }}
+          name: ${{ matrix.runtime }}
           path: |
-            out/Logship.Agent.ConsoleHost
-            out/Logship.Agent.ConsoleHost.exe
+            *.zip
   
   container-release:
     if: startsWith(github.ref, 'refs/tags/')
