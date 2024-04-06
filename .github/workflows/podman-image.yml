@@ -24,19 +24,13 @@ jobs:
             os: windows-latest
           - runtime: linux-x64
             os: ubuntu-latest
-          - runtime: linux-arm64
-            os: ubuntu-latest
+          # - runtime: linux-arm64
+          #   os: ubuntu-latest
           
     name: Build
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Dependencies
-        if: equals(${{matrix.os}}, 'ubuntu-latest')
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y clang llvm binutils-aarch64-linux-gnu gcc-aarch64-linux-gnu zlib1g-dev:arm64
 
       - name: Setup .NET Core
         uses: actions/setup-dotnet@v4
