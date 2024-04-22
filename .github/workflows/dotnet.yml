@@ -35,6 +35,8 @@ jobs:
     #     - /github/home/out:/github/home/out
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: src
 
       - uses: uraimo/run-on-arch-action@v2
         name: Build
@@ -43,10 +45,10 @@ jobs:
           base_image: mcr.microsoft.com/dotnet/sdk:8.0.203-jammy-arm64v8
           githubToken: ${{ github.token }}
           dockerRunArgs: |
-            --volume "${PWD}/:/"
+            --volume "${PWD}/src:/app"
             --volume "${PWD}/out:/out"
           run: |
-            dotnet publish src/ConsoleHost/Logship.Agent.ConsoleHost.csproj -c Release -r linux-arm64 -o /out --self-contained true
+            dotnet publish /app/src/ConsoleHost/Logship.Agent.ConsoleHost.csproj -c Release -r linux-arm64 -o /out --self-contained true
 
       - name: Package
         shell: pwsh
