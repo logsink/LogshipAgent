@@ -29,21 +29,29 @@ jobs:
 
   arm-build:
     runs-on: ubuntu-latest
-    container:
-      image: mcr.microsoft.com/dotnet/sdk:8.0.203-jammy-arm64v8
-      volumes:
-        - /github/home/out:/github/home/out
+    # container:
+    #   image: mcr.microsoft.com/dotnet/sdk:8.0.203-jammy-arm64v8
+    #   volumes:
+    #     - /github/home/out:/github/home/out
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build
-        run: |
-          dotnet publish src/ConsoleHost/Logship.Agent.ConsoleHost.csproj -c Release -r linux-arm64 -o /github/home/out --self-contained true
+      - uses: uraimo/run-on-arch-action@v2
+        name: Build
+        id: build-arm
+        with:
+          base_image: mcr.microsoft.com/dotnet/sdk:8.0.203-jammy-arm64v8
+          githubToken: ${{ github.token }}
+          dockerRunArgs: |
+            --volume "${PWD}/:/"
+            --volume "${PWD}/out:/out"
+          run: |
+            dotnet publish src/ConsoleHost/Logship.Agent.ConsoleHost.csproj -c Release -r linux-arm64 -o /out --self-contained true
 
       - name: Package
         shell: pwsh
         run: |
-          Get-ChildItem "/github/home/out/Logship.Agent.ConsoleHost.exe", "/github/home/out/Logship.Agent.ConsoleHost", "/github/home/out/appsettings.json" -ErrorAction SilentlyContinue |
+          Get-ChildItem "out/Logship.Agent.ConsoleHost.exe", "out/Logship.Agent.ConsoleHost", "out/appsettings.json" -ErrorAction SilentlyContinue |
             Compress-Archive -DestinationPath "LogshipAgent-linux-arm64.zip"
 
       - uses: actions/upload-artifact@v4
