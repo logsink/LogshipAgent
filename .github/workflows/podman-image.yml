@@ -23,6 +23,10 @@ jobs:
             os: ubuntu-latest
           # - runtime: linux-arm64
           #   os: ubuntu-latest
+          - os: macos-latest
+            runtime: osx-x64
+          - os: macos-latest
+            runtime: osx-arm64
           
     name: Build
     runs-on: ${{ matrix.os }}
