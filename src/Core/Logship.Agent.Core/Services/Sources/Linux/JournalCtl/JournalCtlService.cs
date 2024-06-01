@@ -200,7 +200,7 @@ namespace Logship.Agent.Core.Services.Sources.Linux.JournalCtl
             if (false == string.IsNullOrEmpty(filter.HasField))
             {
                 if (false == fields.ContainsKey(filter.HasField)
-                    || false == extraData.ContainsKey(filter.HasField))
+                    && false == extraData.ContainsKey(filter.HasField))
                 {
                     return false;
                 }
