@@ -1,6 +1,3 @@
-using DeviceId;
-using DeviceId.Encoders;
-using DeviceId.Formatters;
 using Logship.Agent.Core.Configuration;
 using Logship.Agent.Core.Events;
 using Logship.Agent.Core.Internals;
@@ -9,7 +6,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Json;
-using System.Security.Cryptography;
 
 namespace Logship.Agent.Core.Services
 {
@@ -30,21 +26,9 @@ namespace Logship.Agent.Core.Services
             this.handshakeAuthenticator = handshakeAuthenticator;
             this.logger = logger;
             this.clientFactory = httpClientFactory;
-            this.deviceId = new DeviceIdBuilder()
-                .AddMachineName()
-                .AddOsVersion()
-                .OnWindows(windows => windows
-                    .AddWindowsDeviceId()
-                    .AddWindowsProductId()
-                    .AddMachineGuid())
-                .OnLinux(linux => linux
-                    .AddMotherboardSerialNumber()
-                    .AddSystemDriveSerialNumber())
-                .OnMac(mac => mac
-                    .AddSystemDriveSerialNumber()
-                    .AddPlatformSerialNumber())
-                .UseFormatter(new HashDeviceIdFormatter(() => SHA256.Create(), new Base64ByteArrayEncoder()))
-                .ToString();
+
+            // todo: real device ID
+            this.deviceId = Guid.NewGuid().ToString();
         }
 
         public async Task PerformHandshakeAsync(CancellationToken cancellationToken)

@@ -10,10 +10,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="DeviceId" />
-    <PackageReference Include="DeviceId.Linux" />
-    <PackageReference Include="DeviceId.Mac" />
-    <PackageReference Include="DeviceId.Windows" />
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" />
     <PackageReference Include="Microsoft.Extensions.Configuration" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
