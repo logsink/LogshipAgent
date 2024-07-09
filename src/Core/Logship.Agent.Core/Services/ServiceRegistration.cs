@@ -1,6 +1,7 @@
 ﻿using Logship.Agent.Core.Configuration;
 using Logship.Agent.Core.Events;
 using Logship.Agent.Core.Inputs.Common;
+using Logship.Agent.Core.Internals;
 using Logship.Agent.Core.Services.Sources.Common;
 using Logship.Agent.Core.Services.Sources.Common.Udp;
 using Logship.Agent.Core.Services.Sources.Linux.JournalCtl;
@@ -18,6 +19,10 @@ namespace Logship.Agent.Core.Services
         {
             return @this
                 .AddHttpClient()
+                .AddSingleton<ITokenStorage, LocalStorage>()
+                .AddSingleton<OutputAuthenticator>()
+                .AddTransient<IOutputAuth>(_ => _.GetRequiredService<OutputAuthenticator>())
+                .AddTransient<IHandshakeAuth>(_ => _.GetRequiredService<OutputAuthenticator>())
                 .AddSingleton<IEventOutput>(_ =>
                 {
                     var config = _.GetRequiredService<IOptions<OutputConfiguration>>();
@@ -26,12 +31,14 @@ namespace Logship.Agent.Core.Services
                         return new ConsoleEventOutput(_.GetRequiredService<ILogger<ConsoleEventOutput>>());
                     }
 
-                    return new LogshipEventOutput(config, 
+                    return new LogshipEventOutput(config,
+                        _.GetRequiredService<OutputAuthenticator>(),
                         _.GetRequiredService<IHttpClientFactory>(),
                         _.GetRequiredService<ILogger<LogshipEventOutput>>());
                 })
                 .AddSingleton<IEventBuffer, InMemoryBuffer>()
                 .AddSingleton<IEventSink, EventSink>()
+                .AddTransient<AgentHandshakeService>()
                 .AddHostedService<AgentHealthService>()
                 .AddHostedService<AgentPushService>()
                 .AddHostedService<DiskInformationService>()

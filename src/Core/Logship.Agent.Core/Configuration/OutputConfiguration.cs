@@ -39,15 +39,30 @@ namespace Logship.Agent.Core.Configuration
         [ValidateObjectMembers]
         [JsonPropertyName("health")]
 		[ConfigurationKeyName("health")]
-        public Health? Health { get; set; }
+        public HealthConfiguration? Health { get; set; }
+
+        [JsonPropertyName("registration")]
+        [ConfigurationKeyName("registration")]
+        public RegistrationConfiguration? Registration { get; set; }
+
+        [JsonPropertyName("dataPath")]
+        [ConfigurationKeyName("dataPath")]
+        public string DataPath { get; set; } = "./logship-agent-local-storage";
     }
 
-    public class Health
+    public sealed class HealthConfiguration
     {
         [Required]
         [PositiveTimeSpan]
         [JsonPropertyName("interval")]
 		[ConfigurationKeyName("interval")]
         public TimeSpan Interval { get; set; } = TimeSpan.FromSeconds(15);
+    }
+
+    public sealed class RegistrationConfiguration
+    {
+        [JsonPropertyName("registrationToken")]
+        [ConfigurationKeyName("registrationToken")]
+        public string RegistrationToken { get; set; } = string.Empty;
     }
 }

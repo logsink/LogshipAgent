@@ -10,6 +10,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="DeviceId" />
+    <PackageReference Include="DeviceId.Linux" />
+    <PackageReference Include="DeviceId.Mac" />
+    <PackageReference Include="DeviceId.Windows" />
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" />
     <PackageReference Include="Microsoft.Extensions.Configuration" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
@@ -17,6 +21,7 @@
     <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="Microsoft.Extensions.Http" />
     <PackageReference Include="System.Diagnostics.PerformanceCounter" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
     <PackageReference Include="System.Text.Json" />
     <PackageReference Include="System.Text.RegularExpressions" />
   </ItemGroup>

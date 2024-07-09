@@ -11,6 +11,8 @@ services:
     volumes:
       - ./logship-database/appsettings.json:/app/appsettings.json:ro
       - ./data:/logship
+    logging:
+      driver: "journald"
   logship-frontend:
     container_name: "logship-frontend"
     image: cr.logship.io/logship-frontend:latest-pre
@@ -21,3 +23,5 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
     volumes:
       - ./logship-frontend/appsettings.json:/app/appsettings.json:ro
+    logging:
+      driver: "journald"

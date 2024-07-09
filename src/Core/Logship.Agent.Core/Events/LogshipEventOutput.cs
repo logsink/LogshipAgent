@@ -1,4 +1,5 @@
 ﻿using Logship.Agent.Core.Configuration;
+using Logship.Agent.Core.Internals;
 using Logship.Agent.Core.Records;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -11,13 +12,15 @@ namespace Logship.Agent.Core.Events
     {
         private readonly string endpoint;
         private readonly Guid subscription;
+        private readonly IOutputAuth authenticator;
         private readonly ILogger<LogshipEventOutput> logger;
         private readonly HttpClient client;
 
-        public LogshipEventOutput(IOptions<OutputConfiguration> config, IHttpClientFactory httpClientFactory, ILogger<LogshipEventOutput> logger)
+        public LogshipEventOutput(IOptions<OutputConfiguration> config, IOutputAuth authenticator, IHttpClientFactory httpClientFactory, ILogger<LogshipEventOutput> logger)
         {
             this.endpoint = config.Value.Endpoint;
             this.subscription = config.Value.Subscription;
+            this.authenticator = authenticator;
             this.logger = logger;
             this.client = httpClientFactory.CreateClient();
             EventsLog.Endpoint(logger, this.endpoint, this.subscription);
@@ -36,17 +39,12 @@ namespace Logship.Agent.Core.Events
                 return true;
             }
 
-            using var memoryStream = new MemoryStream(capacity: records.Count * 100);
-            using (var writer = new Utf8JsonWriter(memoryStream))
+            using var request = await Api.PutInflowAsync(this.endpoint, this.subscription, records, cancellationToken);
+            if (false == await this.authenticator.TryAddAuthAsync(request, cancellationToken))
             {
-                await JsonSerializer.SerializeAsync(memoryStream, records, RecordSourceGenerationContext.Default.IReadOnlyCollectionDataRecord, cancellationToken);
+                EventOutputLog.NoPushAuthorization(this.logger);
+                return false;
             }
-
-            memoryStream.Position = 0;
-            var request = new HttpRequestMessage(HttpMethod.Put, $"{this.endpoint}/inflow/{this.subscription}")
-            {
-                Content = new StreamContent(memoryStream)
-            };
 
             using var sendScope = this.logger.BeginScope(new Dictionary<string, object>
             {
@@ -56,15 +54,20 @@ namespace Logship.Agent.Core.Events
 
             try
             {
-                EventOutputLog.PushingMetics(this.logger);
+                EventOutputLog.PushingMetrics(this.logger);
                 var response = await this.client.SendAsync(request, cancellationToken);
                 if (response.IsSuccessStatusCode)
                 {
-                    EventOutputLog.PushingMeticsSuccessful(this.logger);
+                    EventOutputLog.PushingMetricsSuccessful(this.logger);
                 }
                 else
                 {
-                    EventOutputLog.PushingMeticsFailed(this.logger, response.RequestMessage!.RequestUri, response.StatusCode, response.Content.ToString() ?? string.Empty);
+                    if (response.StatusCode == HttpStatusCode.Unauthorized)
+                    {
+                        await this.authenticator.InvalidateAsync(cancellationToken);
+                    }
+
+                    EventOutputLog.PushingMetricsFailed(this.logger, response.RequestMessage!.RequestUri, response.StatusCode, response.Content.ToString() ?? string.Empty);
                     return false;
                 }
             }
@@ -82,13 +85,16 @@ namespace Logship.Agent.Core.Events
     internal static partial class EventOutputLog
     {
         [LoggerMessage(LogLevel.Debug, "Pushing metrics...")]
-        public static partial void PushingMetics(ILogger logger);
+        public static partial void PushingMetrics(ILogger logger);
 
         [LoggerMessage(LogLevel.Debug, "Successfully pushed metrics.")]
-        public static partial void PushingMeticsSuccessful(ILogger logger);
+        public static partial void PushingMetricsSuccessful(ILogger logger);
 
         [LoggerMessage(LogLevel.Error, "Failed to push HTTP metrics to {RequestUrl}. {Status} {Message}")]
-        public static partial void PushingMeticsFailed(ILogger logger, Uri? requestUrl, HttpStatusCode status, string message);
+        public static partial void PushingMetricsFailed(ILogger logger, Uri? requestUrl, HttpStatusCode status, string message);
+
+        [LoggerMessage(LogLevel.Warning, "No authorization available for HTTP Metrics push. Skipping")]
+        public static partial void NoPushAuthorization(ILogger logger);
 
         [LoggerMessage(LogLevel.Error, "Failed to push metrics.")]
         public static partial void PushingMetricsException(ILogger logger, Exception exception);

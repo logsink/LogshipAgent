@@ -67,6 +67,9 @@ internal sealed class Program
         
         try
         {
+            var handshake = app.Services.GetRequiredService<AgentHandshakeService>();
+            await handshake.PerformHandshakeAsync(tokenSource.Token);
+
             await app.StartAsync(tokenSource.Token);
             ProgramExtensions.Log_AgentStarted(logger, watch.ElapsedMilliseconds);
             await Task.Delay(-1, tokenSource.Token);
