@@ -8,12 +8,8 @@ using Logship.Agent.Core.Internals.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.IdentityModel.Tokens.Jwt;
-using System.Net;
 using System.Net.Http.Json;
-using System.Reflection;
 using System.Security.Cryptography;
-using System.Threading;
-using System.Xml.Linq;
 
 namespace Logship.Agent.Core.Services
 {
@@ -54,6 +50,8 @@ namespace Logship.Agent.Core.Services
         public async Task PerformHandshakeAsync(CancellationToken cancellationToken)
         {
             var delay = TimeSpan.FromSeconds(5);
+            AgentHandshakeServiceLog.AgentHandshake(this.logger);
+
             while (false == cancellationToken.IsCancellationRequested)
             {
                 if (await this.RegisterWithStoredTokenAsync(cancellationToken))
@@ -233,7 +231,7 @@ namespace Logship.Agent.Core.Services
         public static partial void LogDuplicateStart(ILogger logger);
 
         [LoggerMessage(LogLevel.Information, "Executing agent handshake.")]
-        public static partial void LogAgentHandshake(ILogger logger);
+        public static partial void AgentHandshake(ILogger logger);
 
         [LoggerMessage(LogLevel.Warning, "Agent handshake had an unsuccessful response code {StatusCode}: {Message}")]
         public static partial void LogAgentHandshakeErrorResponse(ILogger logger, int statusCode, string message);
