@@ -95,7 +95,9 @@ namespace Logship.Agent.Core.Services
                 return false;
             }
 
-            if (false == await RefreshWithTokenAsync(regToken, token))
+            var refreshToken = await this.tokenStorage.RetrieveTokenAsync(token);
+            if (string.IsNullOrEmpty(refreshToken)
+                || false == await RefreshWithTokenAsync(refreshToken, token))
             {
                 AgentHandshakeServiceLog.FailedRefreshWithRegistrationToken(this.logger);
                 return false;
