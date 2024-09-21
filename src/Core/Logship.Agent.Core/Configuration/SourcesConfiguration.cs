@@ -1,8 +1,10 @@
 ﻿using Logship.Agent.Core.Configuration.Validators.Attributes;
+using Microsoft.AspNetCore.Mvc.DataAnnotations;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
 namespace Logship.Agent.Core.Configuration
@@ -63,6 +65,19 @@ namespace Logship.Agent.Core.Configuration
         [JsonPropertyName("DiskInformation")]
 		[ConfigurationKeyName("DiskInformation")]
         public DiskInformationConfiguration? DiskInfo { get; set; }
+
+        [ValidateObjectMembers]
+        [JsonPropertyName("Otlp")]
+        [ConfigurationKeyName("Otlp")]
+        public OtlpConfiguration? Otlp { get; set; }
+    }
+
+    public class OtlpConfiguration : BaseInputConfiguration
+    {
+        [Range(1, 65535)]
+        [JsonPropertyName("port")]
+        [ConfigurationKeyName("port")]
+        public int Port { get; set; } = 4317;
     }
 
     public sealed class DiskInformationConfiguration : BaseIntervalInputConfiguration
