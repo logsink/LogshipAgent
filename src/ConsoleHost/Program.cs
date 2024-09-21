@@ -49,8 +49,10 @@ internal sealed class Program
             .AddSingleton<IValidateOptions<OutputConfiguration>, OutputConfigurationValidator>()
             .AddSingleton<IValidateOptions<SourcesConfiguration>, SourcesConfigurationValidator>()
             .AddAgentServices();
+
         using var app = builder.Build();
         logger = app.Services.GetRequiredService<ILogger<Program>>();
+
         try
         {
             app.Services.GetRequiredService<IValidateOptions<OutputConfiguration>>()

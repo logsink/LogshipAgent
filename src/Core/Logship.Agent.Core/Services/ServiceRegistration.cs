@@ -3,6 +3,7 @@ using Logship.Agent.Core.Events;
 using Logship.Agent.Core.Inputs.Common;
 using Logship.Agent.Core.Internals;
 using Logship.Agent.Core.Services.Sources.Common;
+using Logship.Agent.Core.Services.Sources.Common.Otlp;
 using Logship.Agent.Core.Services.Sources.Common.Udp;
 using Logship.Agent.Core.Services.Sources.Linux.JournalCtl;
 using Logship.Agent.Core.Services.Sources.Linux.Proc;
@@ -17,7 +18,7 @@ namespace Logship.Agent.Core.Services
     {
         public static IServiceCollection AddAgentServices(this IServiceCollection @this)
         {
-            return @this
+            @this
                 .AddHttpClient()
                 .AddSingleton<ITokenStorage, LocalStorage>()
                 .AddSingleton<OutputAuthenticator>()
@@ -52,7 +53,11 @@ namespace Logship.Agent.Core.Services
                 .AddHostedService<UdpListenerService>()
                 .AddHostedService<EtwService>()
                 .AddHostedService<PerformanceCountersService>()
+                .AddHostedService<OtlpListenerService>()
             ;
+
+            @this.AddGrpc();
+            return @this;
         }
     }
 }

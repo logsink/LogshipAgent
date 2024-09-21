@@ -1,6 +1,7 @@
 ﻿using Logship.Agent.Core.Configuration;
 using Logship.Agent.Core.Events;
 using Logship.Agent.Core.Inputs.Common.Udp;
+using Logship.Agent.Core.Internals;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Net;
@@ -69,6 +70,7 @@ namespace Logship.Agent.Core.Services.Sources.Common.Udp
                 var record = CreateRecord(data.Schema, data.Timestamp);
                 foreach (var kvp in data.Data)
                 {
+                    string key = kvp.Key.AsSpan().CleanSchemaName();
                     if (kvp.Value is JsonElement element)
                     {
                         switch (element.ValueKind)
@@ -80,20 +82,20 @@ namespace Logship.Agent.Core.Services.Sources.Common.Udp
                                     var writer = new Utf8JsonWriter(textStream);
                                     element.WriteTo(writer);
                                     writer.Flush();
-                                    record.Data[kvp.Key] = Encoding.UTF8.GetString(textStream.ToArray());
+                                    record.Data[key] = Encoding.UTF8.GetString(textStream.ToArray());
                                 }
                                 break;
                             case JsonValueKind.String:
-                                record.Data[kvp.Key] = element.GetString() ?? string.Empty;
+                                record.Data[key] = element.GetString() ?? string.Empty;
                                 break;
                             case JsonValueKind.Number:
-                                record.Data[kvp.Key] = element.GetDecimal();
+                                record.Data[key] = element.GetDecimal();
                                 break;
                             case JsonValueKind.True:
-                                record.Data[kvp.Key] = true;
+                                record.Data[key] = true;
                                 break;
                             case JsonValueKind.False:
-                                record.Data[kvp.Key] = false;
+                                record.Data[key] = false;
                                 break;
                             case JsonValueKind.Null:
                             case JsonValueKind.Undefined:
@@ -102,7 +104,7 @@ namespace Logship.Agent.Core.Services.Sources.Common.Udp
                     }
                     else
                     {
-                        record.Data[kvp.Key] = kvp.Value;
+                        record.Data[key] = kvp.Value;
                     }
                 }
 

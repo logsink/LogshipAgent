@@ -4,6 +4,7 @@ using Logship.Agent.Core.Inputs.Linux.JournalCtl;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.Json;
 
 namespace Logship.Agent.Core.Services.Sources.Linux.JournalCtl
@@ -97,7 +98,7 @@ namespace Logship.Agent.Core.Services.Sources.Linux.JournalCtl
             } while (false == token.IsCancellationRequested && r == 0);
         }
 
-        void ReadEntry(JournalHandle journal, CancellationToken cancellationToken)
+        async void ReadEntry(JournalHandle journal, CancellationToken cancellationToken)
         {
             var fields = new Dictionary<string, object>
             {
@@ -144,7 +145,10 @@ namespace Logship.Agent.Core.Services.Sources.Linux.JournalCtl
                 return;
             }
 
-            fields["ExtraData"] = JsonSerializer.Serialize(extraData, JournalCtlSourceGenerationContext.Default.DictionaryStringString);
+            using var stream = new MemoryStream(extraData.Count * 100);
+            await JsonSerializer.SerializeAsync(stream, extraData, JournalCtlSourceGenerationContext.Default.DictionaryStringString, cancellationToken);
+            await stream.FlushAsync(cancellationToken);
+            fields["ExtraData"] = Encoding.UTF8.GetString(stream.ToArray());
             buffer.Add(new Records.DataRecord("Linux.JournalD", DateTimeOffset.UtcNow, fields));
         }
 
