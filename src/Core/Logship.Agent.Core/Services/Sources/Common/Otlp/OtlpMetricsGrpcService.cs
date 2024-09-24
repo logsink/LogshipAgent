@@ -10,15 +10,15 @@ using System.Text;
 
 namespace Logship.Agent.Core.Services.Sources.Common.Otlp
 {
-    internal sealed class OtlpMetricsGrpcService : MetricsService.MetricsServiceBase
+    public sealed class OtlpMetricsGrpcService : MetricsService.MetricsServiceBase
     {
         private readonly IEventBuffer sink;
         private readonly ILogger<OtlpMetricsGrpcService> logger;
-        private readonly IReadOnlyDictionary<string, ExtractResourceAttribute> extractResourceAttributes;
+        private readonly IReadOnlyDictionary<string, ExtractResourceAttributeValue> extractResourceAttributes;
 
         private static readonly ExportMetricsServiceResponse StaticResponse = new ExportMetricsServiceResponse();
 
-        public OtlpMetricsGrpcService(IReadOnlyDictionary<string, ExtractResourceAttribute> extractResourceAttributes, IEventBuffer sink, ILogger<OtlpMetricsGrpcService> logger)
+        public OtlpMetricsGrpcService(IReadOnlyDictionary<string, ExtractResourceAttributeValue> extractResourceAttributes, IEventBuffer sink, ILogger<OtlpMetricsGrpcService> logger)
         {
             this.sink = sink;
             this.logger = logger;

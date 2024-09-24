@@ -32,5 +32,8 @@ namespace Logship.Agent.ConsoleHost
         [LoggerMessage(LogLevel.Error, "Application settings failed validation.")]
         public static partial void Log_ValidationFailed(ILogger logger, OptionsValidationException exception);
 
+        [LoggerMessage(LogLevel.Debug, "Mapping GRPC Services for OTLP")]
+        public static partial void Log_MapOtlpGrpc(ILogger logger);
+
     }
 }

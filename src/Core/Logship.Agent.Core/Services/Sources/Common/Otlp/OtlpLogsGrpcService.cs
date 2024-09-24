@@ -9,15 +9,15 @@ using Logship.Agent.Core.Inputs.Common.Udp;
 
 namespace Logship.Agent.Core.Services.Sources.Common.Otlp
 {
-    internal sealed class OtlpLogsGrpcService : LogsService.LogsServiceBase
+    public sealed class OtlpLogsGrpcService : LogsService.LogsServiceBase
     {
         private readonly IEventBuffer sink;
         private readonly ILogger<OtlpLogsGrpcService> logger;
-        private readonly IReadOnlyDictionary<string, ExtractResourceAttribute> extractResourceAttributes;
+        private readonly IReadOnlyDictionary<string, ExtractResourceAttributeValue> extractResourceAttributes;
 
         private static readonly ExportLogsServiceResponse StaticResponse = new ExportLogsServiceResponse();
 
-        public OtlpLogsGrpcService(IReadOnlyDictionary<string, ExtractResourceAttribute> extractResourceAttributes, IEventBuffer sink, ILogger<OtlpLogsGrpcService> logger)
+        public OtlpLogsGrpcService(IReadOnlyDictionary<string, ExtractResourceAttributeValue> extractResourceAttributes, IEventBuffer sink, ILogger<OtlpLogsGrpcService> logger)
         {
             this.sink = sink;
             this.logger = logger;

@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <PackageReference Update="Grpc.Core" Version="2.46.6" />
-    <PackageReference Update="Grpc.AspNetCore" Version="2.65.0" />
-	<PackageReference Update="Grpc.AspNetCore.Server" Version="2.65.0" />
+    <PackageReference Update="Grpc.AspNetCore" Version="2.66.0" />
 	<PackageReference Update="Grpc.Tools" Version="2.66.0">
 		<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		<PrivateAssets>all</PrivateAssets>

@@ -2,9 +2,8 @@
 using Logship.Agent.Core.Configuration;
 using Logship.Agent.Core.Configuration.Validators;
 using Logship.Agent.Core.Services;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+using Logship.Agent.Core.Services.Sources.Common.Otlp;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
 
@@ -28,7 +27,20 @@ internal sealed class Program
         Activity.ForceDefaultIdFormat = true;
 
         var watch = Stopwatch.StartNew();
-        var builder = Host.CreateApplicationBuilder(args);
+        var builder = WebApplication.CreateSlimBuilder(args);
+        
+        builder.WebHost.UseKestrelCore().ConfigureKestrel(_ =>
+        {
+            var enabled = builder.Configuration.GetValue<bool>("Sources:Otlp:enabled", false);
+            if (enabled)
+            {
+                var port = builder.Configuration.GetValue<int>("Sources:Otlp:port", 4317);
+                _.ListenAnyIP(port, listenOptions => {
+                    listenOptions.Protocols = HttpProtocols.Http2;
+                });
+            }
+            
+        });
         builder.Logging
             .Configure(_ =>
             {
@@ -49,10 +61,10 @@ internal sealed class Program
             .AddSingleton<IValidateOptions<OutputConfiguration>, OutputConfigurationValidator>()
             .AddSingleton<IValidateOptions<SourcesConfiguration>, SourcesConfigurationValidator>()
             .AddAgentServices();
+        builder.Services.AddGrpc();
 
         using var app = builder.Build();
         logger = app.Services.GetRequiredService<ILogger<Program>>();
-
         try
         {
             app.Services.GetRequiredService<IValidateOptions<OutputConfiguration>>()
@@ -66,7 +78,22 @@ internal sealed class Program
             Environment.Exit(-1);
             return;
         }
-        
+
+        var sourceConfig = app.Services.GetRequiredService<IOptions<SourcesConfiguration>>().Value;
+        var outputConfig = app.Services.GetRequiredService<IOptions<OutputConfiguration>>().Value;
+        if (sourceConfig.Otlp != null && sourceConfig.Otlp.Enabled == true)
+        {
+            ProgramExtensions.Log_MapOtlpGrpc(logger);
+            app.MapGrpcService<OtlpLogsGrpcService>();
+            app.MapGrpcService<OtlpMetricsGrpcService>();
+            app.MapGrpcService<OtlpTraceGrpcService>();
+        }
+
+        app.MapGet("/", () =>
+        {
+            return "Logship Agent";
+        });
+
         try
         {
             var handshake = app.Services.GetRequiredService<AgentHandshakeService>();

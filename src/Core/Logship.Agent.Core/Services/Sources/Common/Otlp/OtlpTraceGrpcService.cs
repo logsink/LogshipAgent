@@ -9,15 +9,15 @@ using System.Text;
 
 namespace Logship.Agent.Core.Services.Sources.Common.Otlp
 {
-    internal sealed class OtlpTraceGrpcService : TraceService.TraceServiceBase
+    public sealed class OtlpTraceGrpcService : TraceService.TraceServiceBase
     {
         private readonly IEventBuffer sink;
         private readonly ILogger<OtlpTraceGrpcService> logger;
-        private readonly IReadOnlyDictionary<string, ExtractResourceAttribute> extractResourceAttributes;
+        private readonly IReadOnlyDictionary<string, ExtractResourceAttributeValue> extractResourceAttributes;
 
         private static readonly ExportTraceServiceResponse StaticResponse = new ExportTraceServiceResponse();
 
-        public OtlpTraceGrpcService(IReadOnlyDictionary<string, ExtractResourceAttribute> extractResourceAttributes, IEventBuffer sink, ILogger<OtlpTraceGrpcService> logger)
+        public OtlpTraceGrpcService(IReadOnlyDictionary<string, ExtractResourceAttributeValue> extractResourceAttributes, IEventBuffer sink, ILogger<OtlpTraceGrpcService> logger)
         {
             this.sink = sink;
             this.logger = logger;

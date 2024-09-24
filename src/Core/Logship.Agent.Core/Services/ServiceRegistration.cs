@@ -4,7 +4,6 @@ using Logship.Agent.Core.Inputs.Common;
 using Logship.Agent.Core.Internals;
 using Logship.Agent.Core.Services.Sources.Common;
 using Logship.Agent.Core.Services.Sources.Common.Otlp;
-using Logship.Agent.Core.Services.Sources.Common.Udp;
 using Logship.Agent.Core.Services.Sources.Linux.JournalCtl;
 using Logship.Agent.Core.Services.Sources.Linux.Proc;
 using Logship.Agent.Core.Services.Sources.Windows.Etw;
@@ -37,6 +36,14 @@ namespace Logship.Agent.Core.Services
                         _.GetRequiredService<IHttpClientFactory>(),
                         _.GetRequiredService<ILogger<LogshipEventOutput>>());
                 })
+                .AddSingleton<IReadOnlyDictionary<string, ExtractResourceAttributeValue>>(_ =>
+                {
+                    return new Dictionary<string, ExtractResourceAttributeValue>()
+                    {
+                        ["ServiceVersion"] = new ExtractResourceAttributeValue("service.version", string.Empty),
+                        ["ServiceName"] = new ExtractResourceAttributeValue("service.name", "unknown_service"),
+                    };
+                })
                 .AddSingleton<IEventBuffer, InMemoryBuffer>()
                 .AddSingleton<IEventSink, EventSink>()
                 .AddTransient<AgentHandshakeService>()
@@ -50,13 +57,10 @@ namespace Logship.Agent.Core.Services
                 .AddHostedService<ProcFileReaderService>()
                 .AddHostedService<SystemInformationService>()
                 .AddHostedService<SystemProcessInformationService>()
-                .AddHostedService<UdpListenerService>()
                 .AddHostedService<EtwService>()
                 .AddHostedService<PerformanceCountersService>()
-                .AddHostedService<OtlpListenerService>()
             ;
 
-            @this.AddGrpc();
             return @this;
         }
     }

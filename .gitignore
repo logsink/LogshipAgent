@@ -365,3 +365,4 @@ FodyWeavers.xsd
 !build/packages/*
 
 containers/data/
+logship-agent-local-storage/

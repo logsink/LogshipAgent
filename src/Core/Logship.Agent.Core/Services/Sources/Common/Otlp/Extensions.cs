@@ -42,7 +42,7 @@ namespace Logship.Agent.Core.Services.Sources.Common.Otlp
             return dict;
         }
 
-        internal static void AddExtractedAttributes(this Dictionary<string, object> attributes, IReadOnlyDictionary<string, ExtractResourceAttribute> extractResourceAttributes)
+        internal static void AddExtractedAttributes(this Dictionary<string, object> attributes, IReadOnlyDictionary<string, ExtractResourceAttributeValue> extractResourceAttributes)
         {
             foreach (var kvp in extractResourceAttributes)
             {
