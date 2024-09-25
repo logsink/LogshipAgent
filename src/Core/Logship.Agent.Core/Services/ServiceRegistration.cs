@@ -4,6 +4,7 @@ using Logship.Agent.Core.Inputs.Common;
 using Logship.Agent.Core.Internals;
 using Logship.Agent.Core.Services.Sources.Common;
 using Logship.Agent.Core.Services.Sources.Common.Otlp;
+using Logship.Agent.Core.Services.Sources.Common.Udp;
 using Logship.Agent.Core.Services.Sources.Linux.JournalCtl;
 using Logship.Agent.Core.Services.Sources.Linux.Proc;
 using Logship.Agent.Core.Services.Sources.Windows.Etw;
@@ -59,6 +60,7 @@ namespace Logship.Agent.Core.Services
                 .AddHostedService<SystemProcessInformationService>()
                 .AddHostedService<EtwService>()
                 .AddHostedService<PerformanceCountersService>()
+                .AddHostedService<UdpListenerService>()
             ;
 
             return @this;
