@@ -16,9 +16,9 @@ namespace Logship.Agent.Core.Configuration
         public string Endpoint { get; set; } = CONSOLEOUTPUT;
 
         [Required]
-        [JsonPropertyName("subscription")]
-		[ConfigurationKeyName("subscription")]
-        public Guid Subscription { get; set; } = Guid.Empty;
+        [JsonPropertyName("account")]
+		[ConfigurationKeyName("account")]
+        public Guid Account { get; set; } = Guid.Empty;
 
         [Required]
         [PositiveTimeSpan]

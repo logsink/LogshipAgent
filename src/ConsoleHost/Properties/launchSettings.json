@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Logship.Agent.ConsoleHost": {
+      "commandName": "Project",
+      "launchBrowser": false,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:49852;http://localhost:49853"
+    }
+  }
+}

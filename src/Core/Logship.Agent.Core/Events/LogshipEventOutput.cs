@@ -11,7 +11,7 @@ namespace Logship.Agent.Core.Events
     internal sealed class LogshipEventOutput : IEventOutput, IDisposable
     {
         private readonly string endpoint;
-        private readonly Guid subscription;
+        private readonly Guid account;
         private readonly IOutputAuth authenticator;
         private readonly ILogger<LogshipEventOutput> logger;
         private readonly HttpClient client;
@@ -19,11 +19,11 @@ namespace Logship.Agent.Core.Events
         public LogshipEventOutput(IOptions<OutputConfiguration> config, IOutputAuth authenticator, IHttpClientFactory httpClientFactory, ILogger<LogshipEventOutput> logger)
         {
             this.endpoint = config.Value.Endpoint;
-            this.subscription = config.Value.Subscription;
+            this.account = config.Value.Account;
             this.authenticator = authenticator;
             this.logger = logger;
             this.client = httpClientFactory.CreateClient();
-            EventsLog.Endpoint(logger, this.endpoint, this.subscription);
+            EventsLog.Endpoint(logger, this.endpoint, this.account);
         }
 
         public void Dispose()
@@ -39,7 +39,7 @@ namespace Logship.Agent.Core.Events
                 return true;
             }
 
-            using var request = await Api.PutInflowAsync(this.endpoint, this.subscription, records, cancellationToken);
+            using var request = await Api.PutInflowAsync(this.endpoint, this.account, records, cancellationToken);
             if (false == await this.authenticator.TryAddAuthAsync(request, cancellationToken))
             {
                 EventOutputLog.NoPushAuthorization(this.logger);

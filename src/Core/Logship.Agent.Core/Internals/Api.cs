@@ -13,7 +13,7 @@ namespace Logship.Agent.Core.Internals
 {
     internal static class Api
     {
-        public static async Task<HttpRequestMessage> PutInflowAsync(string endpoint, Guid subscription, IReadOnlyCollection<DataRecord> records, CancellationToken token)
+        public static async Task<HttpRequestMessage> PutInflowAsync(string endpoint, Guid account, IReadOnlyCollection<DataRecord> records, CancellationToken token)
         {
             var memoryStream = new MemoryStream(capacity: records.Count * 100);
             using (var writer = new Utf8JsonWriter(memoryStream))
@@ -22,7 +22,7 @@ namespace Logship.Agent.Core.Internals
             }
 
             memoryStream.Position = 0;
-            var message = new HttpRequestMessage(HttpMethod.Put, $"{endpoint}/inflow/{subscription}")
+            var message = new HttpRequestMessage(HttpMethod.Put, $"{endpoint}/inflow/{account}")
             {
                 Content = new StreamContent(memoryStream)
             };

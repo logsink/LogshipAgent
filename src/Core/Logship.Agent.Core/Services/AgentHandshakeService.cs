@@ -175,7 +175,7 @@ namespace Logship.Agent.Core.Services
         {
             using var client = this.clientFactory.CreateClient(nameof(AgentHandshakeService));
             var name = System.Environment.MachineName;
-            var model = new Internals.Models.AgentRegistrationRequestModel(name, name, deviceId, [], this.config.Value.Subscription);
+            var model = new Internals.Models.AgentRegistrationRequestModel(name, name, deviceId, [], this.config.Value.Account);
             using var registerRequest = await Api.PostAgentHandshakeAsync(this.config.Value.Endpoint, model, token);
             if (false == string.IsNullOrWhiteSpace(registrationToken))
             {

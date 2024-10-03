@@ -6,5 +6,5 @@ using System.Threading.Tasks;
 
 namespace Logship.Agent.Core.Internals.Models
 {
-    internal sealed record AgentRegistrationRequestModel(string Name, string HostName, string MachineIdentifier, IReadOnlyList<KeyValuePair<string, string>> Attributes, Guid Subscription);
+    internal sealed record AgentRegistrationRequestModel(string Name, string HostName, string MachineIdentifier, IReadOnlyList<KeyValuePair<string, string>> Attributes, Guid Account);
 }
